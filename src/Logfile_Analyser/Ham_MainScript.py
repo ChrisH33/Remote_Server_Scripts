@@ -1,6 +1,6 @@
 import sys
 from src.Logging_Util import get_logger
-from src import credentials as credentials
+from src.Logfile_Analyser import credentials as credentials
 from src.Logfile_Analyser import Ham_Config as config
 from src.Logfile_Analyser._ParseLogs import run_parser
 from src.Logfile_Analyser._CleanRawLogfiles import run_cleaner
@@ -37,22 +37,6 @@ def main() -> None:
         logger.info(f"--- {step_label('parse_logs')}: Parsing raw .trc log files ---")
         try:
             run_parser(
-                log_folder=config.LOG_FOLDER,
-                processed_folder=config.PROCESSED_FOLDER,
-                output_file=config.OUTPUT_FILE,
-                patterns=config.PATTERNS,
-                end_patterns=config.END_PATTERNS,
-                abort_patterns=config.ABORT_PATTERNS,
-                method_re=config.METHOD_RE,
-                serial_re=config.SERIAL_RE,
-                fields=config.FIELDS,
-                file_ext=config.FILE_EXTENSION,
-                max_workers=config.MAX_WORKERS,
-                save_batch_size=config.SAVE_BATCH_SIZE,
-                save_interval_seconds=config.SAVE_INTERVAL_SECONDS,
-                move_files_after_parse=config.MOVE_FILES_AFTER_PARSE,
-                logger_name=LOGGER_NAME,
-                log_file=config.PARSE_LOG_FILE,
             )
         except Exception:
             logger.exception("Parsing step failed - stopping pipeline")
@@ -65,17 +49,6 @@ def main() -> None:
         logger.info(f"--- {step_label('clean_logs')}: Cleaning/tidying results for Tableau ---")
         try:
             run_cleaner(
-                state_file=config.STATE_FILE,
-                raw_input_file=config.OUTPUT_FILE,
-                tidy_output_file=config.TIDY_OUTPUT_FILE,
-                tidy_fields=config.TIDY_FIELDS,
-                statuses_to_drop=config.STATUSES_TO_DROP,
-                filename_prefixes_to_drop=config.FILENAME_PREFIXES_TO_DROP,
-                process_types=config.PROCESS_TYPES,
-                method_simplified=config.METHOD_SIMPLIFIED,
-                pipeline_codes=config.PIPELINE_CODES,
-                logger_name=LOGGER_NAME,
-                log_file=config.CLEAN_LOG_FILE,
             )
         except Exception:
             logger.exception("Cleaning step failed - stopping pipeline")
