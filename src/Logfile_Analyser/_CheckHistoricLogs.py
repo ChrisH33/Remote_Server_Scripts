@@ -45,7 +45,6 @@ def _write_warning_file(warning_file: Path, stale: list, stale_days: int, logger
     ]
     try:
         warning_file.write_text("\n".join(lines), encoding="utf-8")
-        logger.warning(f"Wrote to {Path(warning_file).name} listing {len(stale)} stale instrument(s).")
     except OSError as e:
         logger.error(f"Could not write {warning_file}: {e}")
 
@@ -68,7 +67,7 @@ def check_stale_instruments(
     warning_file: Path,
     logger
 ) -> None:
-    logger.info(">> Checking instrument activity")
+    logger.info("Checking instrument activity")
     now = datetime.now()
     cutoff = now - timedelta(days=stale_days)
 

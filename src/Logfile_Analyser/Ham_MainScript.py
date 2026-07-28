@@ -79,6 +79,7 @@ def main() -> None:
                 config.TABLEAU_FILE,
                 config.TABLEAU_PROJECT_ID,
                 config.TABLEAU_DATA_NAME,
+                logger,
                 server_url=config.TABLEAU_SERVER_ADDRESS,
                 site_id=config.TABLEAU_SITE_ID,
                 token_name=credentials.TOKEN_NAME,
