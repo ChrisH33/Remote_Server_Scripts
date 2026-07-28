@@ -1,7 +1,6 @@
-import sys
 from src.Logging_Util import get_logger
-from _CheckHistoricLogs import check_stale_instruments
-import Ham_Config as config
+from src.Logfile_Analyser._CheckHistoricLogs import check_stale_instruments
+from src.Logfile_Analyser import Ham_Config as config
 
 # =========================================================================
 # STEPS TO RUN - flip any of these to False to skip that step
@@ -34,10 +33,14 @@ def main() -> None:
         try:
             check_stale_instruments(
                 config.TIDY_OUTPUT_FILE,
-                30,
+                config.DAYS_BEFORE_STALE,
                 config.LOG_FOLDER,
                 config.PROCESSED_FOLDER,
-                config.PYTHON_LOG_FILE,
+                config.TRACE_FOLDER,
+                config.STALE_INSTRUMENTS,
                 logger)
-        except:
-            print("")
+        except Exception as e:
+            logger.error(f"check_stale_instruments failed: {e}")
+
+if __name__ == "__main__":
+    main()
