@@ -1,1 +1,2 @@
-def run_cleaner()
+def run_cleaner():
+    return None

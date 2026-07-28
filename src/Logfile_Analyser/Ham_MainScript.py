@@ -13,8 +13,8 @@ from src.Logfile_Analyser._CheckHistoricLogs import check_stale_instruments
 # =========================================================================
 
 STEPS_TO_RUN = {
-    "parse_logs":   True,   # Condense traces into a single .csv
-    "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
+    "parse_logs":   False,   # Condense traces into a single .csv
+    "clean_logs":   False,   # Tidy raw csv into a Tableau-ready csv
     "create_hyper": True,   # Convert tidy csv into a hyper file
     "publish":      True,   # Push hyper file to Tableau server
     "check_stale":  True,   # Create a warning if an instrument has gone quiet for too long
@@ -63,6 +63,7 @@ def main() -> None:
             create_hyper_from_csv(
                 csv_path=config.TIDY_OUTPUT_FILE,
                 hyper_path=config.TABLEAU_FILE,
+                logger=logger,
             )
         except Exception:
             logger.exception("Hyper file creation failed - stopping pipeline")

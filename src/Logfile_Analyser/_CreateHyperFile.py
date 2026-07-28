@@ -15,10 +15,13 @@ from tableauhyperapi import (
 def create_hyper_from_csv(
     csv_path: str | Path,
     hyper_path: str | Path,
+    logger,
     schema_name: str = "Extract",
     table_name: str = "Extract",
     sample_size: int = 100,
-):
+) -> None:
+
+    logger.info("Starting Hyper file creation from %s", Path(hyper_path).name)
 
     datetime_formats = (
         "%Y-%m-%d %H:%M:%S",
@@ -57,10 +60,16 @@ def create_hyper_from_csv(
 
         return SqlType.text(), lambda v: v
 
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        headers = next(reader)
-        rows = list(reader)
+    try:
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+            rows = list(reader)
+    except Exception:
+        logger.exception("Failed to read CSV file %s", csv_path)
+        raise
+
+    logger.info("Read %d headers and %d data rows from %s", len(headers), len(rows), Path(csv_path).name)
 
     samples = [[] for _ in headers]
     for i, row in enumerate(rows):
@@ -69,6 +78,8 @@ def create_hyper_from_csv(
         if i >= sample_size:
             break
 
+    logger.debug("Collected sample rows for type inference across %d columns", len(headers))
+
     col_info = [detect_type_and_parser(values) for values in samples]
     columns = [
         TableDefinition.Column(col, sqltype)
@@ -76,18 +87,24 @@ def create_hyper_from_csv(
     ]
     table = TableDefinition(table_name=TableName(schema_name, table_name), columns=columns)
 
-    with HyperProcess(Telemetry.SEND_USAGE_DATA_TO_TABLEAU, parameters={"default_database_version": "2"}) as hyper:
-        with Connection(endpoint=hyper.endpoint, database=hyper_path, create_mode=CreateMode.CREATE_AND_REPLACE) as connection:
-            connection.catalog.create_schema(schema_name)
-            connection.catalog.create_table(table)
+    logger.debug("Inferred column types for %s: %s", table_name, ", ".join(f"{col}={sqltype}" for col, (sqltype, _) in zip(headers, col_info)))
 
-            with Inserter(connection, table) as inserter:
-                for row in rows:
-                    parsed_row = []
-                    for value, (_, parser) in zip(row, col_info):
-                        value = value.strip()
-                        parsed_row.append(None if value == "" else parser(value))
-                    inserter.add_row(parsed_row)
-                inserter.execute()
+    try:
+        with HyperProcess(Telemetry.SEND_USAGE_DATA_TO_TABLEAU, parameters={"default_database_version": "2"}) as hyper:
+            with Connection(endpoint=hyper.endpoint, database=hyper_path, create_mode=CreateMode.CREATE_AND_REPLACE) as connection:
+                connection.catalog.create_schema(schema_name)
+                connection.catalog.create_table(table)
 
-    print("Hyper file created successfully:", hyper_path)
+                with Inserter(connection, table) as inserter:
+                    for row in rows:
+                        parsed_row = []
+                        for value, (_, parser) in zip(row, col_info):
+                            value = value.strip()
+                            parsed_row.append(None if value == "" else parser(value))
+                        inserter.add_row(parsed_row)
+                    inserter.execute()
+    except Exception:
+        logger.exception("Failed to create Hyper file %s", hyper_path)
+        raise
+
+    logger.info("Hyper file created successfully")

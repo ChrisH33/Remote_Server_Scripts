@@ -1,1 +1,2 @@
-def run_parser()
+def run_parser():
+    return None
