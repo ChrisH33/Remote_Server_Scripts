@@ -2,11 +2,11 @@ from pathlib import Path
 
 LOG_FOLDER = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles\Hamilton")  # <-- Logfile location
 LOG_FOLDER = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles\Hamilton")  # <-- Logfile location
-# LOG_FOLDER = Path(r"C:\Users\ch33\Documents\Hamilton LogFiles")
+# LOG_FOLDER = Path(r"C:\Users\ch33\Documents\Hamilton")
 
 
 PROCESSED_FOLDER = LOG_FOLDER / "Processed"
-MOVE_FILES_AFTER_PARSE = False
+MOVE_FILES_AFTER_PARSE = True
 
 
 OUTPUT_FILE = LOG_FOLDER / "CondensedLogs_Raw.csv" 

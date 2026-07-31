@@ -10,9 +10,9 @@ import os
 # CONFIG - the settings you're most likely to want to change
 # =========================================================================
 
-METHOD_RE = re.compile(r"Method file *\\([^\\]+)\.hsl", re.IGNORECASE)
+METHOD_RE = re.compile(r"method file .*\\([^\\]+)\.hsl",re.IGNORECASE,)
 SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
-MAX_WORKERS = os.cpu_count() or 4
+MAX_WORKERS = min(4, os.cpu_count() or 4)
 FILE_EXTENSION = "*.trc"
 
 PATTERNS = {
@@ -82,7 +82,7 @@ def process_file(
 
     try:
         with logfile.open("r", encoding="utf-8", errors="ignore") as file:
-            for _, line in enumerate(file, start=1):
+            for line in file:
                 line_lower = line.lower()
 
                 # Method name
@@ -109,17 +109,15 @@ def process_file(
                             break
 
                 # End / abort
-                elif (
-                    any(PATTERNS[key] in line_lower for key in END_PATTERNS)
-                    or any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
-                ):
-                    if len(previous_lines) >= 2:
-                        end_time = parse_timestamp(previous_lines[-2], logfile.name, logger)
-                    if any(PATTERNS[key] in line_lower for key in END_PATTERNS):
-                        status = "Complete"
-                    else:
-                        status = "Aborted"
-                    break
+                else:
+                    is_end = any(PATTERNS[key] in line_lower for key in END_PATTERNS)
+                    is_abort = any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
+
+                    if is_end or is_abort:
+                        if len(previous_lines) >= 2:
+                            end_time = parse_timestamp(previous_lines[-2], logfile.name, logger)
+                        status = "Complete" if is_end else "Aborted"
+                        break
 
                 # Keep the last two lines for end/abort timestamp lookup
                 previous_lines.append(line)
@@ -243,6 +241,9 @@ def run_parser(
                 result = future.result()
                 if result is not None:
                     results.append(result)
+                    if count % 1000 == 0:
+                        logger.info(f"Processed {count}/{total_files} files")
+                    
 
             except Exception:
                 logger.exception(f"Error processing {logfile.name}")
