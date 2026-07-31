@@ -35,11 +35,7 @@ def main() -> None:
                 patterns=config.PATTERNS,
                 end_patterns=config.END_PATTERNS,
                 abort_patterns=config.ABORT_PATTERNS,
-                method_re=config.METHOD_RE,
-                serial_re=config.SERIAL_RE,
                 fields=config.FIELDS,
-                file_ext=config.FILE_EXTENSION,
-                max_workers=config.MAX_WORKERS,
                 move_files_after_parse=config.MOVE_FILES_AFTER_PARSE,
                 logger=logger
             )

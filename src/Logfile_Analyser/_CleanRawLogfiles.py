@@ -100,7 +100,7 @@ def add_calculated_fields(
     pipeline_codes: set[str],
     logger: logging.Logger,
 ) -> dict:
-
+    
     process_type, simplified_method = extract_process_type_and_method(
         method,
         process_types,
@@ -145,7 +145,6 @@ def clean_row(
         return None
 
     method = raw_row.get("Method", "")
-
     start_time = parse_datetime(
         raw_row.get("Start Time", ""),
         logger,
@@ -196,7 +195,6 @@ def run_cleaner(
 ) -> None:
 
     logger.info("=== Tidy-up script starting ===")
-
 
     # Check raw input exists
     if not raw_input_file.exists():

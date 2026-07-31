@@ -4,6 +4,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
 import re
 import shutil
+import os
+
+METHOD_RE = re.compile(r"Method file .*\\([^\\]+)\.hsl", re.IGNORECASE)
+SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
+MAX_WORKERS = os.cpu_count() or 4
+FILE_EXTENSION = "*.trc"
 
 def parse_timestamp(
     line: str,
@@ -24,8 +30,6 @@ def process_file(
     patterns: dict[str, str],
     end_patterns: tuple[str, ...],
     abort_patterns: tuple[str, ...],
-    method_re: re.Pattern,
-    serial_re: re.Pattern,
     fields: list[tuple[str, str]],
 ) -> tuple[Path, list] | None:
     """Parse one logfile and return its path and extracted data."""
@@ -50,13 +54,13 @@ def process_file(
 
                 # Method name
                 if method is None and patterns["Method Name"] in line_lower:
-                    match = method_re.search(line)
+                    match = METHOD_RE.search(line)
                     if match:
                         method = match.group(1)
 
                 # Serial number / simulation mode
                 if sim_mode == "Sim" and patterns["serial"] in line_lower:
-                    match = serial_re.search(line)
+                    match = SERIAL_RE.search(line)
 
                     if match:
                         serial = match.group(1).strip()
@@ -158,13 +162,13 @@ def write_results(
 
         writer.writerows(rows)
 
-def find_log_files(log_folder: Path, ignored_folders: set[Path], file_ext: str) -> list[Path]:
+def find_log_files(log_folder: Path, ignored_folders: set[Path]) -> list[Path]:
     ignored = {p.resolve() for p in ignored_folders}
     files = []
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
             continue
-        files.extend(entry.rglob(file_ext))
+        files.extend(entry.rglob(FILE_EXTENSION))
     return files
 
 def run_parser(
@@ -176,11 +180,7 @@ def run_parser(
     patterns: dict[str, str],
     end_patterns: tuple[str, ...],
     abort_patterns: tuple[str, ...],
-    method_re: re.Pattern,
-    serial_re: re.Pattern,
     fields: list[tuple[str, str]],
-    file_ext: str,
-    max_workers: int,
     move_files_after_parse: bool,
     logger,
 ) -> None:
@@ -192,12 +192,12 @@ def run_parser(
     # ---------------------------------------------------------
 
     logger.info("Looking for files to process...")
-    files = find_log_files(log_folder, ignored_folders, file_ext)
+    files = find_log_files(log_folder, ignored_folders)
     total_files = len(files)
 
     logger.info(
         f"Found {total_files} files. "
-        f"Processing with {max_workers} workers..."
+        f"Processing with {MAX_WORKERS} workers..."
     )
 
     # ---------------------------------------------------------
@@ -206,7 +206,7 @@ def run_parser(
 
     results = []
 
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {
             executor.submit(
                 process_file,
@@ -215,8 +215,6 @@ def run_parser(
                 patterns=patterns,
                 end_patterns=end_patterns,
                 abort_patterns=abort_patterns,
-                method_re=method_re,
-                serial_re=serial_re,
                 fields=fields,
             ): logfile
             for logfile in files

@@ -1,13 +1,11 @@
 from pathlib import Path
-import re
-import os
 
 LOG_FOLDER = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles\Hamilton")  # <-- Logfile location
 LOG_FOLDER = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles\Hamilton")  # <-- Logfile location
 # LOG_FOLDER = Path(r"C:\Users\ch33\Documents\Hamilton LogFiles")
 
+MOVE_FILES_AFTER_PARSE = False
 DAYS_BEFORE_STALE = 45
-MOVE_FILES_AFTER_PARSE = True
 
 PROCESSED_FOLDER = LOG_FOLDER / "Processed"
 TRACE_FOLDER = LOG_FOLDER / "Traces"
@@ -24,11 +22,6 @@ TABLEAU_SITE_ID = ""
 TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
 TABLEAU_DATA_NAME = "Hamilton Tidy Logs"
 
-METHOD_RE = re.compile(r"Method file .*\\([^\\]+)\.hsl", re.IGNORECASE)
-SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
-MAX_WORKERS = os.cpu_count() or 4
-FILE_EXTENSION = "*.trc"
-
 # =========================================================================
 # STEPS TO RUN - flip any of these to False to skip that step
 # =========================================================================
@@ -36,8 +29,8 @@ FILE_EXTENSION = "*.trc"
 STEPS_TO_RUN = {
     "parse_logs":   True,   # Condense traces into a single .csv
     "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
-    "create_hyper": False,   # Convert tidy csv into a hyper file
-    "publish":      False,   # Push hyper file to Tableau server
+    "create_hyper": True,   # Convert tidy csv into a hyper file
+    "publish":      True,   # Push hyper file to Tableau server
     "check_stale":  True,   # Create a warning if an instrument has gone quiet for too long
 }
 
@@ -57,7 +50,7 @@ PATTERNS = {
     "abort_2":          "system : method has been aborted by the user - complete;",
     "abort_3":          "system : method has been aborted by the method - complete;",
     "abort_4":          "system : execute method - error; an error occurred while running vector.",
-    "Method Name":      "system : execute method - start; method file",
+    "Method Name":      "system : analyze method - start; method file",
     "serial":           "star : start method command - progress; serial number of instrument:",
     "96 MPH Pickup":    "star : co-re 96 head tip pick up (single step) - complete",
     "384 MPH Pickup":   "star : co-re 384 head tip pick up (single step) - complete",
