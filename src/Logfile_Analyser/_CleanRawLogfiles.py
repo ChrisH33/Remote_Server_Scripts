@@ -9,39 +9,23 @@ def get_unique_ids(df: pd.DataFrame) -> set:
     """Return unique IDs from column 2 of a DataFrame."""
     return set(df.iloc[:, 1].dropna())
 
-def extract_process_type(
+def extract_process_type_and_method(
     method: str,
-    process_types: dict[str, list[str]],
+    process_types: dict[str, dict[str, list[str]]],
     logger: logging.Logger,
-) -> str:
+) -> tuple[str, str]:
     try:
         text = method.upper()
     except AttributeError:
         logger.warning(f"Invalid method: {method!r}")
-        return "Unknown"
+        return "Unknown", "Unknown"
 
-    for process_type, substrings in process_types.items():
-        if any(s.upper() in text for s in substrings):
-            return process_type
+    for process_type, simplified_methods in process_types.items():
+        for simplified, variants in simplified_methods.items():
+            if any(v.upper() == text for v in variants):
+                return process_type, simplified
 
-    return "Unknown"
-
-def parse_base_method(
-    method: str,
-    method_simplified: dict[str, list[str]],
-    logger: logging.Logger,
-) -> str:
-    try:
-        text = method.upper().strip()
-    except AttributeError:
-        logger.warning(f"Invalid method: {method!r}")
-        return "Unknown"
-
-    for method_base, methods in method_simplified.items():
-        if any(m.upper().strip() == text for m in methods):
-            return method_base
-
-    return method
+    return "Unknown", "Unknown"
 
 def extract_pipeline(
     method: str,
@@ -112,11 +96,16 @@ def add_calculated_fields(
     start_time: datetime | None,
     end_time: datetime | None,
     *,
-    process_types: dict[str, list[str]],
-    method_simplified: dict[str, list[str]],
+    process_types,
     pipeline_codes: set[str],
     logger: logging.Logger,
 ) -> dict:
+
+    process_type, simplified_method = extract_process_type_and_method(
+        method,
+        process_types,
+        logger,
+    )
 
     return {
         "run_duration_minutes": calculate_run_duration(
@@ -125,20 +114,12 @@ def add_calculated_fields(
         ),
         "run_date": extract_run_date(start_time),
         "pipeline": extract_pipeline(
-            method,
+            simplified_method,
             pipeline_codes,
             logger,
         ),
-        "process_type": extract_process_type(
-            method,
-            process_types,
-            logger,
-        ),
-        "method_simplified": parse_base_method(
-            method,
-            method_simplified,
-            logger,
-        ),
+        "process_type":process_type,
+        "method_simplified": simplified_method,
     }
 
 def clean_row(
@@ -146,8 +127,7 @@ def clean_row(
     *,
     statuses_to_drop: set[str],
     filename_prefixes_to_drop: tuple[str, ...],
-    process_types: dict[str, list[str]],
-    method_simplified: dict[str, list[str]],
+    process_types: dict[str, dict[str, list[str]]],
     pipeline_codes: set[str],
     tidy_fields: list[tuple[str, str, str]],
     logger: logging.Logger,
@@ -177,11 +157,7 @@ def clean_row(
     )
 
     tidy_data = {
-        # IMPORTANT:
-        # Keep the unique ID in the tidy CSV.
-        # Adjust "Unique ID" to match your actual raw CSV column name.
         "unique_id": raw_row.get("Unique ID", ""),
-
         "instrument": raw_row.get("Instrument", ""),
         "filename": raw_row.get("Filename", ""),
         "start_time": start_time,
@@ -197,7 +173,6 @@ def clean_row(
             start_time,
             end_time,
             process_types=process_types,
-            method_simplified=method_simplified,
             pipeline_codes=pipeline_codes,
             logger=logger,
         ),
@@ -215,8 +190,7 @@ def run_cleaner(
     tidy_fields: list[tuple[str, str, str]],
     statuses_to_drop: set[str],
     filename_prefixes_to_drop: tuple[str, ...],
-    process_types: dict[str, list[str]],
-    method_simplified: dict[str, list[str]],
+    process_types,
     pipeline_codes: set[str],
     logger: logging.Logger,
 ) -> None:
@@ -269,7 +243,6 @@ def run_cleaner(
                 statuses_to_drop=statuses_to_drop,
                 filename_prefixes_to_drop=filename_prefixes_to_drop,
                 process_types=process_types,
-                method_simplified=method_simplified,
                 pipeline_codes=pipeline_codes,
                 tidy_fields=tidy_fields,
                 logger=logger,

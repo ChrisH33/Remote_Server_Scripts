@@ -158,10 +158,20 @@ def write_results(
 
         writer.writerows(rows)
 
+def find_log_files(log_folder: Path, ignored_folders: set[Path], file_ext: str) -> list[Path]:
+    ignored = {p.resolve() for p in ignored_folders}
+    files = []
+    for entry in log_folder.iterdir():
+        if not entry.is_dir() or entry.resolve() in ignored:
+            continue
+        files.extend(entry.rglob(file_ext))
+    return files
+
 def run_parser(
     *,
     log_folder: Path,
     processed_folder: Path,
+    ignored_folders: set[Path],
     output_file: Path,
     patterns: dict[str, str],
     end_patterns: tuple[str, ...],
@@ -182,11 +192,7 @@ def run_parser(
     # ---------------------------------------------------------
 
     logger.info("Looking for files to process...")
-
-    files = list(log_folder.rglob(file_ext))
-    if not files:
-        logger.info("Nothing to do - exiting.")
-        return
+    files = find_log_files(log_folder, ignored_folders, file_ext)
     total_files = len(files)
 
     logger.info(

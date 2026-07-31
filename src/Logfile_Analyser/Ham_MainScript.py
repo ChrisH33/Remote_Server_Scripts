@@ -30,6 +30,7 @@ def main() -> None:
             run_parser(
                 log_folder=config.LOG_FOLDER,
                 processed_folder=config.PROCESSED_FOLDER,
+                ignored_folders={config.PROCESSED_FOLDER, config.TRACE_FOLDER},
                 output_file=config.OUTPUT_FILE,
                 patterns=config.PATTERNS,
                 end_patterns=config.END_PATTERNS,
@@ -61,7 +62,6 @@ def main() -> None:
                     statuses_to_drop=config.STATUSES_TO_DROP,
                     filename_prefixes_to_drop=config.FILENAME_PREFIXES_TO_DROP,
                     process_types=config.PROCESS_TYPES,
-                    method_simplified=config.METHOD_SIMPLIFIED,
                     pipeline_codes=config.PIPELINE_CODES,
                     logger=logger,
                 )
