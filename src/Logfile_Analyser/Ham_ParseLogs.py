@@ -82,7 +82,7 @@ def process_file(
 
     try:
         with logfile.open("r", encoding="utf-8", errors="ignore") as file:
-            for line_number, line in enumerate(file, start=1):
+            for _, line in enumerate(file, start=1):
                 line_lower = line.lower()
 
                 # Method name
@@ -187,15 +187,6 @@ def write_results(
 
         writer.writerows(rows)
 
-def find_log_files(log_folder: Path, ignored_folders: set[Path]) -> list[Path]:
-    ignored = {p.resolve() for p in ignored_folders}
-    files = []
-    for entry in log_folder.iterdir():
-        if not entry.is_dir() or entry.resolve() in ignored:
-            continue
-        files.extend(entry.rglob(FILE_EXTENSION))
-    return files
-
 def run_parser(
     *,
     log_folder: Path,
@@ -212,9 +203,16 @@ def run_parser(
     # ---------------------------------------------------------
     # 1. Find all files
     # ---------------------------------------------------------
-
+    
     logger.info("Looking for files to process...")
-    files = find_log_files(log_folder, ignored_folders)
+
+    files = []
+
+    ignored = {p.resolve() for p in ignored_folders}
+    for entry in log_folder.iterdir():
+        if not entry.is_dir() or entry.resolve() in ignored:
+            continue
+        files.extend(entry.rglob(FILE_EXTENSION))
     total_files = len(files)
 
     logger.info(
@@ -239,26 +237,16 @@ def run_parser(
             for logfile in files
         }
 
-        for count, future in enumerate(
-            as_completed(futures),
-            start=1,
-        ):
+        for count, future in enumerate(as_completed(futures), start=1):
             logfile = futures[future]
-
             try:
                 result = future.result()
-
                 if result is not None:
                     results.append(result)
 
             except Exception:
-                logger.exception(
-                    f"Error processing {logfile.name}"
-                )
-
-    logger.info(
-        f"Finished parsing {len(results)}/{total_files} files"
-    )
+                logger.exception(f"Error processing {logfile.name}")
+    logger.info(f"Finished parsing {len(results)}/{total_files} files")
 
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
@@ -271,29 +259,11 @@ def run_parser(
         with output_file.open("r", newline="", encoding="utf-8") as file:
             reader = csv.reader(file)
             next(reader, None)  # Skip header
-
-            existing_ids = {
-                row[1]
-                for row in reader
-                if len(row) > 1
-            }
-
-    new_rows = [
-        row
-        for row in rows
-        if row[1] not in existing_ids
-    ]
-
+            existing_ids = {row[1] for row in reader if len(row) > 1}
+    new_rows = [row for row in rows if row[1] not in existing_ids]
     if new_rows:
-        write_results(
-            new_rows,
-            output_file,
-            fields,
-        )
-
-        logger.info(
-            f"Saved {len(new_rows)} new results to {output_file}"
-        )
+        write_results(new_rows, output_file, fields)
+        logger.info(f"Saved {len(new_rows)} new results to {output_file}")
     else:
         logger.info("No new results to save")
 
