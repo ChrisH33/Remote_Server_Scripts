@@ -57,26 +57,6 @@ PROCESS_TYPES = {
         "16S_PostPCR_CleanUp": [
             "16S_POSTPCR_CLEANUP",
         ],
-        "1_BIORAD_PLATE_ISC_PCR_XP": [
-            "1_BIORAD_PLATE_ISC_PCR_XP",
-            "1_BIORAD_PLATE_ISC_PCR_XP_STAR6"
-        ],
-        "1_BIORAD_PLATE_ISC_POST_CAP_PCR_XP": [
-            "1_BIORAD_PLATE_ISC_POST_CAP_PCR_XP",
-            "1_BIORAD_PLATE_ISC_POST_CAP_PCR_XP_STAR6"
-        ],
-        "1_BIORAD_PLATE_LCMB_ISC_PCR_XP": [
-            "1_BIORAD_PLATE_LCMB_ISC_PCR_XP",
-            "1_BIORAD_PLATE_LCMB_ISC_PCR_XP_STAR6",
-        ],
-        "1_BIORAD_PLATE_LCMB_WGS_PCR_XP": [
-            "1_BIORAD_PLATE_LCMB_WGS_PCR_XP",
-            "1_BIORAD_PLATE_LCMB_WGS_PCR_XP_STAR6"
-        ],
-        "1_BIORAD_PLATE_WGS_PCR_XP": [
-            "1_BIORAD_PLATE_WGS_PCR_XP",
-            "1_BIORAD_PLATE_WGS_PCR_XP_STAR6",
-        ],
         "1_PLATE_10X_PSI_1X_SPRI": [
             "1_PLATE_10X_PSI_1X_SPRI_V0.2",
             "1_PLATE_10X_PSI_1X_SPRI_V0.3",
@@ -99,7 +79,7 @@ PROCESS_TYPES = {
         "1_PLATE_BOTSEQ_PCR_XP": [
             "1_PLATE_BOTSEQ_PCR_XP",
             "1_PLATE_BOTSEQ_PCR_XP_H4",
-            "1_PLATE_BOTSEQ_PCR_XP_H4_SVL_TRANSFORMER PLATE AS SOURCE"
+            "1_PLATE_BOTSEQ_PCR_XP_H4_SVL_TRANSFORMER PLATE AS SOURCE",
         ],
         "1_PLATE_FFPE_ISC_PCR_XP": [
             "1_PLATE_FFPE_ISC_PCR_XP",
@@ -110,36 +90,109 @@ PROCESS_TYPES = {
             "1_PLATE_FFPE_ISC_POST_CAP_PCR_XP_STAR6"
         ],
         "1_PLATE_ISC_PCR_XP": [
+            "ISC_PCR_XP",
             "1_PLATE_ISC_PCR_XP",
-            "1_PLATE_ISC_PCR_XP_STAR6"
+            "1_PLATE_ISC_PCR_XP_STAR6",
+            "1_BIORAD_PLATE_ISC_PCR_XP",
+            "1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
         ],
         "1_PLATE_ISC_POST_CAP_PCR_XP": [
             "1_PLATE_ISC_POST_CAP_PCR_XP",
-            "1_PLATE_ISC_POST_CAP_PCR_XP_STAR6"
+            "1_PLATE_ISC_POST_CAP_PCR_XP_STAR6",
+            "1_BIORAD_PLATE_ISC_POST_CAP_PCR_XP",
+            "1_BIORAD_PLATE_ISC_POST_CAP_PCR_XP_STAR6",
         ],
         "1_PLATE_LCMB_ISC_PCR_XP": [
             "1_PLATE_LCMB_ISC_PCR_XP",
-            "1_PLATE_LCMB_ISC_PCR_XP_STAR6"
+            "1_PLATE_LCMB_ISC_PCR_XP_STAR6",
+            "1_BIORAD_PLATE_LCMB_ISC_PCR_XP",
+            "1_BIORAD_PLATE_LCMB_ISC_PCR_XP_STAR6",
         ],
         "1_PLATE_LCMB_WGS_PCR_XP": [
             "1_PLATE_LCMB_WGS_PCR_XP",
-            "1_PLATE_LCMB_WGS_PCR_XP_STAR6"
+            "1_PLATE_LCMB_WGS_PCR_XP_STAR6",
+            "1_BIORAD_PLATE_LCMB_WGS_PCR_XP",
+            "1_BIORAD_PLATE_LCMB_WGS_PCR_XP_STAR6",
         ],
         "1_PLATE_WGS_PCR_XP": [
             "1_PLATE_WGS_PCR_XP",
-            "1_PLATE_WGS_PCR_XP_STAR6"
+            "1_PLATE_WGS_PCR_XP_STAR6",
+            "1_BIORAD_PLATE_WGS_PCR_XP",
+            "1_BIORAD_PLATE_WGS_PCR_XP_STAR6",
         ],
         "1_PLATE_RNA_PCR_XP": [
             "1_PLATE_RNA_PCR_XP",
             "1_PLATE_RNA_PCR_XP_CLEANUP_IN_TWINTEC"
         ],
-        "2_BIORAD_PLATE_ISC_PCR_XP": [
-            "2_BIORAD_PLATE_ISC_PCR_XP",
-            "2_BIORAD_PLATE_ISC_PCR_XP_STAR6"
+        "2_PLATE_BOTSEQ_PCR_XP": [
+            "2_PLATE_BOTSEQ_PCR_XP",
         ],
-        "2_BIORAD_PLATE_ISC_POST_CAP_PCR_XP": [
+        "2_PLATE_FFPE_ISC_PCR_XP": [
+            "2_PLATE_FFPE_ISC_PCR_XP",
+            "2_PLATE_FFPE_ISC_PCR_XP_STAR6",
+        ],
+        "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP": [
+            "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP",
+            "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP_STAR6",
+        ],
+        "2_PLATE_ISC_PCR_XP": [
+            "2_PLATE_ISC_PCR_XP",
+            "2_PLATE_ISC_PCR_XP_STAR6",
+            "2_BIORAD_PLATE_ISC_PCR_XP",
+            "2_BIORAD_PLATE_ISC_PCR_XP_STAR6",
+        ],
+        "2_PLATE_ISC_POST_CAP_PCR_XP": [
+            "2_PLATE_ISC_POST_CAP_PCR_XP",
+            "2_PLATE_ISC_POST_CAP_PCR_XP_STAR6",
             "2_BIORAD_PLATE_ISC_POST_CAP_PCR_XP",
-            "2_BIORAD_PLATE_ISC_POST_CAP_PCR_XP_STAR6"
+            "2_BIORAD_PLATE_ISC_POST_CAP_PCR_XP_STAR6",
+        ],
+        "2_PLATE_LCMB_ISC_PCR_XP": [
+            "2_PLATE_LCMB_ISC_PCR_XP",
+            "2_PLATE_LCMB_ISC_PCR_XP_STAR6",
+            "2_BIORAD_PLATE_LCMB_ISC_PCR_XP",
+            "2_BIORAD_PLATE_LCMB_ISC_PCR_XP_STAR6",
+        ],
+        "2_PLATE_LCMB_WGS_PCR_XP": [
+            "2_PLATE_LCMB_WGS_PCR_XP",
+            "2_PLATE_LCMB_WGS_PCR_XP_STAR6",
+            "2_BIORAD_PLATE_LCMB_WGS_PCR_XP",
+            "2_BIORAD_PLATE_LCMB_WGS_PCR_XP_STAR6",
+        ],
+        "2_PLATE_WGS_PCR_XP": [
+            "2_PLATE_WGS_PCR_XP",
+            "2_PLATE_WGS_PCR_XP_STAR6",
+            "2_BIORAD_PLATE_WGS_PCR_XP",
+            "2_BIORAD_PLATE_WGS_PCR_XP_STAR6",
+        ],
+        "2_PLATE_10X_PSI_2X_SPRI": [
+            "2_PLATE_10X_PSI_2X_SPRI",
+        ],
+        "384WGS_PostShear_XP_Biorad": [
+            "384WGS_POSTSHEAR_XPBIORAD",
+            "384WGS_POSTSHEAR_XPBIORAD_V1.0",
+        ],
+        "384WGS_PostShear_XP": [
+            "384 WGS POST SHEAR XP V0.1",
+            "384 WGS POST SHEAR XP_BIORAD V0.1",
+            "384 WGS POST SHEAR XP_BIORAD V0.4",
+        ],
+        "384 PF Post Shear XP": [
+            "384 PF POST SHEAR XP V0.1",
+            "384 PF POST SHEAR XP V0.1.BACKUP200319",
+            "384 PF POST SHEAR XP_BIORAD V0.1",
+        ],
+        "384 PF Post Shear XP Consolidation": [
+            "384 PF POST SHEAR XP_CONSOLIDATION_V0.1",
+            "384 PF POST SHEAR XP_CONSOLIDATION_V0.2",
+        ],
+        "384_RLT_XP": [
+            "384_RLT_XP_V0.1",
+        ],
+        "96 wells bead clean": [
+            "IB3 96 WELLS BEAD CLEAN",
+            "IB3 96 WELLS BEAD CLEAN V2",
+            "96 WELLS BEAD CLEAN",
         ],
         "Double-Sided SPRI": [
             "DOUBLE-SIDED SPRI V1.0",
@@ -167,77 +220,12 @@ PROCESS_TYPES = {
             "GENERIC_BEAD_CLEANUP",
             "GENERIC_SPRI_CLEANUP",
         ],
-        "2_BIORAD_PLATE_LCMB_WGS_PCR_XP": [
-            "2_BIORAD_PLATE_LCMB_WGS_PCR_XP",
-            "2_BIORAD_PLATE_LCMB_WGS_PCR_XP_STAR6"
-        ],
-        "2_BIORAD_PLATE_LCMB_ISC_PCR_XP": [
-            "2_BIORAD_PLATE_LCMB_ISC_PCR_XP",
-            "2_BIORAD_PLATE_LCMB_ISC_PCR_XP_STAR6",
-        ],
-        "2_BIORAD_PLATE_WGS_PCR_XP": [
-            "2_BIORAD_PLATE_WGS_PCR_XP",
-            "2_BIORAD_PLATE_WGS_PCR_XP_STAR6",
-        ],
-        "2_PLATE_10X_PSI_2X_SPRI": [
-            "2_PLATE_10X_PSI_2X_SPRI",
-        ],
-        "IB3 96 wells bead clean": [
-            "IB3 96 WELLS BEAD CLEAN",
-            "IB3 96 WELLS BEAD CLEAN V2",
-        ],
-        "2_PLATE_BOTSEQ_PCR_XP": [
-            "2_PLATE_BOTSEQ_PCR_XP",
-        ],
-        "2_PLATE_FFPE_ISC_PCR_XP": [
-            "2_PLATE_FFPE_ISC_PCR_XP",
-            "2_PLATE_FFPE_ISC_PCR_XP_STAR6",
-        ],
-        "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP": [
-            "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP",
-            "2_PLATE_FFPE_ISC_POST_CAP_PCR_XP_STAR6",
-        ],
-        "2_PLATE_ISC_PCR_XP": [
-            "2_PLATE_ISC_PCR_XP",
-            "2_PLATE_ISC_PCR_XP_STAR6",
-        ],
-        "2_PLATE_ISC_POST_CAP_PCR_XP": [
-            "2_PLATE_ISC_POST_CAP_PCR_XP",
-            "2_PLATE_ISC_POST_CAP_PCR_XP_STAR6",
-        ],
-        "2_PLATE_LCMB_ISC_PCR_XP": [
-            "2_PLATE_LCMB_ISC_PCR_XP",
-            "2_PLATE_LCMB_ISC_PCR_XP_STAR6",
-        ],
-        "2_PLATE_LCMB_WGS_PCR_XP": [
-            "2_PLATE_LCMB_WGS_PCR_XP",
-            "2_PLATE_LCMB_WGS_PCR_XP_STAR6",
-        ],
-        "2_PLATE_WGS_PCR_XP": [
-            "2_PLATE_WGS_PCR_XP",
-            "2_PLATE_WGS_PCR_XP_STAR6",
-        ],
-        "384WGS_PostShear_XP_Biorad": [
-            "384WGS_POSTSHEAR_XPBIORAD",
-            "384WGS_POSTSHEAR_XPBIORAD_V1.0",
-        ],
-        "384WGS_PostShear_XP": [
-            "384 WGS POST SHEAR XP V0.1",
-            "384 WGS POST SHEAR XP_BIORAD V0.1",
-            "384 WGS POST SHEAR XP_BIORAD V0.4",
-        ],
-        "384 PF Post Shear XP": [
-            "384 PF POST SHEAR XP V0.1",
-            "384 PF POST SHEAR XP V0.1.BACKUP200319",
-            "384 PF POST SHEAR XP_BIORAD V0.1",
-        ],
-        "384 PF Post Shear XP Consolidation": [
-            "384 PF POST SHEAR XP_CONSOLIDATION_V0.1",
-            "384 PF POST SHEAR XP_CONSOLIDATION_V0.2",
-        ],
         "AMPure CleanUp 384 Plate": [
             "AMPURE CLEANUP 384 WELL PLATE V1.3",
             "AMPURE CLEANUP 384 WELL PLATE V1.4",
+            "AMPURE CLEANUP 384 WELL PLATE V1.2",
+            "AMPURE CLEANUP 384 WELL PLATE V1.6",
+            "AMPURE CLEANUP 384 WELL PLATE V1.7",
         ],
         "CLCM_EM_PCR_XP": [
             "CLCM_EM_PCR_XP_STAR6",
@@ -252,6 +240,9 @@ PROCESS_TYPES = {
         "Ultima_SingleSidedCleanUp": [
             "ULTIMA_SINGLESIDEDCLEANUP",
             "ULTIMA_SINGLESIDEDCLEANUPV1.1",
+        ],
+        "Ultima_DoubleSidedCleanUp": [
+            "ULTIMA_DOUBLESIDEDCLEANUP",
         ],
         "RVI_BC_POST_CAPTURE_XP_0.8X": [
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR4",
@@ -287,7 +278,6 @@ PROCESS_TYPES = {
             "SCRNA CORE POST CDNA AMP CLEANUP_V2",
             "SCRNA CORE POST CDNA AMP CLEANUP_V3",
         ],
-
     },
     "Extraction": {
         "BeadExtraction_NoCooledCarriers": [
@@ -340,6 +330,9 @@ PROCESS_TYPES = {
             "BOT-SEQ_SAMPLE DILUTION V1.10_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
             "BOT-SEQ_SAMPLE DILUTION V1.11_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
             "BOT-SEQ_SAMPLE DILUTION V1.12_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON"
+        ],
+        "SampleNormalisation_CherryPicking": [
+            "SAMPLENORMALISATION_CHERRYPICKING",
         ],
         "Sample Dilution": [
             "SAMPLE DILUTION V1.0",
@@ -410,6 +403,7 @@ PROCESS_TYPES = {
             "POOLSAMPLES_V7",
         ],
         "Pooling Sangerised": [
+            "Pooling",
             "POOLING SANGERISED",
             "POOLING SANGERISED V2",
             "POOLING SANGERISED2",
@@ -424,6 +418,10 @@ PROCESS_TYPES = {
             "96POOLSAMPLE_V2",
             "96POOLSAMPLE_V3.1",
             "96POOLSAMPLE_V3",
+            "POOL96WELLPLATE_V1.0"
+        ],
+        "Bioscan_SamplesPooling_384toTubes": [
+            "BIOSCAN_SAMPLESPOOLING_384TOTUBES_V0",
         ],
         "COVID-19_PoolSamples_96w": [
             "COVID-19_POOLSAMPLES_96W_V0.1",
@@ -465,6 +463,16 @@ PROCESS_TYPES = {
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H5",
         ],
+        "PoolSample_Single_Plate": [
+            "PoolSample_single_plate_V1_NXT",
+            "PoolSample_single_plate_V1",
+        ],
+        "pWGS_384_PoolSamples": [
+            "PWGS_384_POOLSAMPLES_V1.0",
+        ],
+        "Pool384Plates": [
+            "Pool384Platesv1",
+        ],
     },
     "Cherry Picking": {
         "Cherry Pick": [
@@ -504,6 +512,8 @@ PROCESS_TYPES = {
             "300UL_TIP_GRAVIMETRIC",
             "GRAVIMETRIC BABE",
             "GRAVIMETRIC POST PCR CHANNELS",
+            "GRAVIMETRIC 8 CHANNELS",
+            "GRAVIMETRIC 96 HEAD",
             "SANGER_384HEAD ARTEL V1.0",
             "SANGER_ARTEL MVS FOR CHANNELS AND MPH96 V2.7",
         ],
@@ -513,15 +523,34 @@ PROCESS_TYPES = {
             "384 HEAD CHECK 1",
             "384_HEAD_UNIFORMITY_PIPETTING_TEST",
         ],
+        "Shearing Tests": [
+            "SHEARING TESTS",
+            "SHEARING TESTS V0.2",
+            "SHEARING TESTS V0.3",
+            "SHEARING TESTS V0.4",
+            "SHEARING TESTS v0.5",
+            "SHEARING TESTS V0.6",
+            "SHEARING TESTS v0.7",
+            "SHEARING TESTS v0.8",
+            "SHEARING TESTS v0.9",
+            "SHEARING TESTS v0.10",
+            "Shearing tests v0.10 hack",
+        ],
         "Other": [
             "96 HEAD FLATNESS",
             "96 HEAD STOP DISK CHNAGE TEST",
             "AT_TESTMETHOD",
+            "Single-Sided SPRI v1.7_SVL_AJtest",
+            "Grips",
+            "Fluidigm_Chip_Teaching_Test_v1.0",
             "BOO",
             "CH_TEST",
             "CLLD TEST",
             "CLLD TESTING",
+            "Single-Sided SPRI VDJ Z error test",
+            "PlatePiercing_v1",
             "CLOSE YOUR JAWS",
+            "DOWNHOLDERPIPETTING_V1",
             "ALCOHOL_HANDLING_TEST_010520",
             "AP_AFTERPM_TEST",
             "GRIPPER USE TEST FOR NTRS",
@@ -540,7 +569,6 @@ PROCESS_TYPES = {
             "PLATE MOVES",
             "PLATEMOVES",
             "PLATEMOVESTEST",
-            "SHEARING TESTS",
             "FUMBLES",
             "SHORT PIPETTING SCRIPT",
             "SM TEST",
@@ -573,6 +601,9 @@ PROCESS_TYPES = {
             "PLATE STAMPING V1.8B",
             "PLATE STAMPING V1.9",
         ],
+        "Heron_96_to_384_consolidation": [
+            "HERON_96_TO_384_CONSOLIDATION.V1.0",
+        ],
         "Combine 4x96": [
             "COMBINE 4X96_1.1",
             "COMBINE 4X96_1.2",
@@ -586,6 +617,9 @@ PROCESS_TYPES = {
             "COMBINE_4X96_1.4",
             "COMBINE_4X96_1.4B",
             "COMBINE_4X96_LOW_QUALITY_FIX_1.2",
+        ],
+        "Axygen_3x384to12x96_quadrants_STAR": [
+            "AXYGEN_3X384TO12X96_QUADRANTS_STAR_V1.1",
         ],
     }
 }
@@ -610,7 +644,6 @@ TIDY_FIELDS = [
     ("method", "Method", "text"),
     ("run_duration_minutes", "Run Duration (min)", "float"),
     ("run_date", "Run Date", "date"),
-    ("pipeline", "Pipeline", "text"),
     ("process_type", "Process Type", "text"),
     ("method_simplified", "Method Simp.", "text")
 ]
