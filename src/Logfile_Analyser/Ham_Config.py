@@ -4,16 +4,16 @@ LOG_FOLDER = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Log
 LOG_FOLDER = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles\Hamilton")  # <-- Logfile location
 # LOG_FOLDER = Path(r"C:\Users\ch33\Documents\Hamilton LogFiles")
 
-MOVE_FILES_AFTER_PARSE = False
-DAYS_BEFORE_STALE = 45
 
 PROCESSED_FOLDER = LOG_FOLDER / "Processed"
-TRACE_FOLDER = LOG_FOLDER / "Traces"
+MOVE_FILES_AFTER_PARSE = False
+
 
 OUTPUT_FILE = LOG_FOLDER / "CondensedLogs_Raw.csv" 
 TIDY_OUTPUT_FILE = LOG_FOLDER / "TidyLogs_ForTableau.csv"
 TABLEAU_FILE = LOG_FOLDER / "TidyLogs.hyper"
 
+TRACE_FOLDER = LOG_FOLDER / "Traces"
 PYTHON_LOG_FILE = TRACE_FOLDER / "python_logs.txt"
 STALE_INSTRUMENTS = TRACE_FOLDER / "stale_instruments.txt"
 
@@ -21,6 +21,8 @@ TABLEAU_SERVER_ADDRESS = "https://globalreporting.internal.sanger.ac.uk"
 TABLEAU_SITE_ID = ""
 TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
 TABLEAU_DATA_NAME = "Hamilton Tidy Logs"
+
+DAYS_BEFORE_STALE = 45
 
 # =========================================================================
 # STEPS TO RUN - flip any of these to False to skip that step
@@ -38,53 +40,16 @@ STEPS_TO_RUN = {
 # CONFIG - the settings you're most likely to want to change
 # =========================================================================
 
-PATTERNS = {
-    "start":            "system : start method - complete;",
-    "end_1":            "system : end method - start;",
-    "end_2":            "system : custom dialog - start; <method finished>",
-    "end_3":            "system : custom dialog - start; <protocol complete>",
-    "end_4":            "user : trace - complete; clean up completed",
-    "end_5":            "available button(s): <ok>,   default button: <ok>,   message: <end of uv decontamination process.>",
-    "end_6":            "microlab® star : end method command - start;",
-    "abort_1":          "system : abort method - start;",
-    "abort_2":          "system : method has been aborted by the user - complete;",
-    "abort_3":          "system : method has been aborted by the method - complete;",
-    "abort_4":          "system : execute method - error; an error occurred while running vector.",
-    "Method Name":      "system : analyze method - start; method file",
-    "serial":           "star : start method command - progress; serial number of instrument:",
-    "96 MPH Pickup":    "star : co-re 96 head tip pick up (single step) - complete",
-    "384 MPH Pickup":   "star : co-re 384 head tip pick up (single step) - complete",
-}
-ABORT_PATTERNS = (
-    "abort_1",
-    "abort_2",
-    "abort_3",
-    "abort_4",
-)
-END_PATTERNS = (
-    "end_1",
-    "end_2",
-    "end_3",
-    "end_4",
-    "end_5",
-    "end_6"
-)
-STATUSES_TO_DROP = {
-    "Read Error",
-    "No Start Found"
-}
+
 FILENAME_PREFIXES_TO_DROP = (
     "HxUsbComm",
     "ComTrace_Simulator",
     "Hamilton Backup Utility",
-    "hamilton backup utility"
 )
-PIPELINE_CODES = {
-    "ISC",
-    "LCMB",
-    "WGS",
-    "10X",
-    "Ultima"
+
+STATUSES_TO_DROP = {
+    "Read Error",
+    "No Start Found"
 }
 
 PROCESS_TYPES = {
@@ -633,8 +598,6 @@ FIELDS = [
     ("status", "Status"),
     ("sim_mode", "Sim Mode"),
     ("method", "Method"),
-    ("tips_96MPH", "tips 96MPH"),
-    ("tips_384MPH", "tips 384MPH"),
 ]
 
 TIDY_FIELDS = [
@@ -645,8 +608,6 @@ TIDY_FIELDS = [
     ("status", "Status", "text"),
     ("sim_mode", "Sim Mode", "text"),
     ("method", "Method", "text"),
-    ("tips_96MPH", "Tips 96MPH", "int"),
-    ("tips_384MPH", "Tips 384MPH", "int"),
     ("run_duration_minutes", "Run Duration (min)", "float"),
     ("run_date", "Run Date", "date"),
     ("pipeline", "Pipeline", "text"),

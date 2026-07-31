@@ -27,23 +27,6 @@ def extract_process_type_and_method(
 
     return "Unknown", "Unknown"
 
-def extract_pipeline(
-    method: str,
-    pipeline_codes: set[str],
-    logger: logging.Logger,
-) -> str:
-    try:
-        tokens = method.upper().split("_")
-    except AttributeError:
-        logger.warning(f"Invalid method: {method!r}")
-        return "Unknown"
-
-    for token in tokens:
-        if token in pipeline_codes:
-            return token
-
-    return "Unknown"
-
 def extract_run_date(
     timestamp: datetime | None,
 ) -> str:
@@ -97,7 +80,6 @@ def add_calculated_fields(
     end_time: datetime | None,
     *,
     process_types,
-    pipeline_codes: set[str],
     logger: logging.Logger,
 ) -> dict:
     
@@ -113,11 +95,6 @@ def add_calculated_fields(
             end_time,
         ),
         "run_date": extract_run_date(start_time),
-        "pipeline": extract_pipeline(
-            simplified_method,
-            pipeline_codes,
-            logger,
-        ),
         "process_type":process_type,
         "method_simplified": simplified_method,
     }
@@ -128,20 +105,19 @@ def clean_row(
     statuses_to_drop: set[str],
     filename_prefixes_to_drop: tuple[str, ...],
     process_types: dict[str, dict[str, list[str]]],
-    pipeline_codes: set[str],
     tidy_fields: list[tuple[str, str, str]],
     logger: logging.Logger,
 ) -> list | None:
 
-    status = (raw_row.get("Status") or "").strip()
-    filename = (raw_row.get("Filename") or "").strip()
+    status = (raw_row.get("Status") or "").strip().lower()
+    filename = (raw_row.get("Filename") or "").strip().lower()
 
     # Drop unwanted statuses
-    if status in statuses_to_drop:
+    if status in {s.lower() for s in statuses_to_drop}:
         return None
 
     # Drop unwanted filenames
-    if filename.startswith(filename_prefixes_to_drop):
+    if filename.startswith(tuple(p.lower() for p in filename_prefixes_to_drop)):
         return None
 
     method = raw_row.get("Method", "")
@@ -164,15 +140,12 @@ def clean_row(
         "status": status,
         "sim_mode": raw_row.get("Sim Mode", ""),
         "method": method,
-        "tips_96MPH": raw_row.get("tips 96MPH", ""),
-        "tips_384MPH": raw_row.get("tips 384MPH", ""),
 
         **add_calculated_fields(
             method,
             start_time,
             end_time,
             process_types=process_types,
-            pipeline_codes=pipeline_codes,
             logger=logger,
         ),
     }
@@ -190,7 +163,6 @@ def run_cleaner(
     statuses_to_drop: set[str],
     filename_prefixes_to_drop: tuple[str, ...],
     process_types,
-    pipeline_codes: set[str],
     logger: logging.Logger,
 ) -> None:
 
@@ -241,7 +213,6 @@ def run_cleaner(
                 statuses_to_drop=statuses_to_drop,
                 filename_prefixes_to_drop=filename_prefixes_to_drop,
                 process_types=process_types,
-                pipeline_codes=pipeline_codes,
                 tidy_fields=tidy_fields,
                 logger=logger,
             )

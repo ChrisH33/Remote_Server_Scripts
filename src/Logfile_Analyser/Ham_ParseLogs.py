@@ -6,10 +6,48 @@ import re
 import shutil
 import os
 
-METHOD_RE = re.compile(r"Method file .*\\([^\\]+)\.hsl", re.IGNORECASE)
+# =========================================================================
+# CONFIG - the settings you're most likely to want to change
+# =========================================================================
+
+METHOD_RE = re.compile(r"Method file *\\([^\\]+)\.hsl", re.IGNORECASE)
 SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
 MAX_WORKERS = os.cpu_count() or 4
 FILE_EXTENSION = "*.trc"
+
+PATTERNS = {
+    "start":            "system : start method - complete;",
+    "end_1":            "system : end method - start;",
+    "end_2":            "system : custom dialog - start; <method finished>",
+    "end_3":            "system : custom dialog - start; <protocol complete>",
+    "end_4":            "user : trace - complete; clean up completed",
+    "end_5":            "available button(s): <ok>,   default button: <ok>,   message: <end of uv decontamination process.>",
+    "end_6":            "microlab® star : end method command - start;",
+    "abort_1":          "system : abort method - start;",
+    "abort_2":          "system : method has been aborted by the user - complete;",
+    "abort_3":          "system : method has been aborted by the method - complete;",
+    "abort_4":          "system : execute method - error; an error occurred while running vector.",
+    "Method Name":      "system : analyze method - start; method file",
+    "serial":           "star : start method command - progress; serial number of instrument:",
+}
+ABORT_PATTERNS = (
+    "abort_1",
+    "abort_2",
+    "abort_3",
+    "abort_4",
+)
+END_PATTERNS = (
+    "end_1",
+    "end_2",
+    "end_3",
+    "end_4",
+    "end_5",
+    "end_6"
+)
+
+# =========================================================================
+# FUNCTIONS
+# =========================================================================
 
 def parse_timestamp(
     line: str,
@@ -27,9 +65,6 @@ def process_file(
     logfile: Path,
     logger,
     *,
-    patterns: dict[str, str],
-    end_patterns: tuple[str, ...],
-    abort_patterns: tuple[str, ...],
     fields: list[tuple[str, str]],
 ) -> tuple[Path, list] | None:
     """Parse one logfile and return its path and extracted data."""
@@ -39,8 +74,6 @@ def process_file(
     status = None
     method = None
 
-    tips_96MPH = 0
-    tips_384MPH = 0
     sim_mode = "Sim"
 
     # The timestamp for an end/abort event is two lines before
@@ -53,13 +86,13 @@ def process_file(
                 line_lower = line.lower()
 
                 # Method name
-                if method is None and patterns["Method Name"] in line_lower:
+                if method is None and PATTERNS["Method Name"] in line_lower:
                     match = METHOD_RE.search(line)
                     if match:
                         method = match.group(1)
 
                 # Serial number / simulation mode
-                if sim_mode == "Sim" and patterns["serial"] in line_lower:
+                if sim_mode == "Sim" and PATTERNS["serial"] in line_lower:
                     match = SERIAL_RE.search(line)
 
                     if match:
@@ -68,27 +101,21 @@ def process_file(
                     else:
                         sim_mode = "undefined"
 
-                # Tip pickup counts
-                if patterns["96 MPH Pickup"] in line_lower:
-                    tips_96MPH += 1
-                elif patterns["384 MPH Pickup"] in line_lower:
-                    tips_384MPH += 1
-
                 # Start time
                 if start_time is None:
-                    if patterns["start"] in line_lower:
+                    if PATTERNS["start"] in line_lower:
                         start_time = parse_timestamp(line, logfile.name, logger)
                         if start_time is None:
                             break
 
                 # End / abort
                 elif (
-                    any(patterns[key] in line_lower for key in end_patterns)
-                    or any(patterns[key] in line_lower for key in abort_patterns)
+                    any(PATTERNS[key] in line_lower for key in END_PATTERNS)
+                    or any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
                 ):
                     if len(previous_lines) >= 2:
                         end_time = parse_timestamp(previous_lines[-2], logfile.name, logger)
-                    if any(patterns[key] in line_lower for key in end_patterns):
+                    if any(PATTERNS[key] in line_lower for key in END_PATTERNS):
                         status = "Complete"
                     else:
                         status = "Aborted"
@@ -125,8 +152,6 @@ def process_file(
         "status": status,
         "sim_mode": sim_mode,
         "method": method,
-        "tips_96MPH": tips_96MPH,
-        "tips_384MPH": tips_384MPH,
     }
 
     instrument = logfile.parent.name
@@ -177,9 +202,6 @@ def run_parser(
     processed_folder: Path,
     ignored_folders: set[Path],
     output_file: Path,
-    patterns: dict[str, str],
-    end_patterns: tuple[str, ...],
-    abort_patterns: tuple[str, ...],
     fields: list[tuple[str, str]],
     move_files_after_parse: bool,
     logger,
@@ -212,9 +234,6 @@ def run_parser(
                 process_file,
                 logfile,
                 logger,
-                patterns=patterns,
-                end_patterns=end_patterns,
-                abort_patterns=abort_patterns,
                 fields=fields,
             ): logfile
             for logfile in files

@@ -32,9 +32,6 @@ def main() -> None:
                 processed_folder=config.PROCESSED_FOLDER,
                 ignored_folders={config.PROCESSED_FOLDER, config.TRACE_FOLDER},
                 output_file=config.OUTPUT_FILE,
-                patterns=config.PATTERNS,
-                end_patterns=config.END_PATTERNS,
-                abort_patterns=config.ABORT_PATTERNS,
                 fields=config.FIELDS,
                 move_files_after_parse=config.MOVE_FILES_AFTER_PARSE,
                 logger=logger
@@ -58,7 +55,6 @@ def main() -> None:
                     statuses_to_drop=config.STATUSES_TO_DROP,
                     filename_prefixes_to_drop=config.FILENAME_PREFIXES_TO_DROP,
                     process_types=config.PROCESS_TYPES,
-                    pipeline_codes=config.PIPELINE_CODES,
                     logger=logger,
                 )
             else:
