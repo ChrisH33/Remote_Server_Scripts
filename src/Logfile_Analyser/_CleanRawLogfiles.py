@@ -22,7 +22,7 @@ def extract_process_type_and_method(
 
     for process_type, simplified_methods in process_types.items():
         for simplified, variants in simplified_methods.items():
-            if any(v.upper() == text for v in variants):
+            if any(v.casefold() == text.casefold() for v in variants):
                 return process_type, simplified
 
     return "Unknown", "Unknown"
@@ -65,7 +65,7 @@ def parse_datetime(
     try:
         return datetime.strptime(
             value,
-            "%Y-%m-%d %H:%M:%S",
+            "%d/%m/%Y %H:%M",
         )
 
     except ValueError:
