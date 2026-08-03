@@ -127,7 +127,7 @@ def main() -> None:
         except Exception as e:
             logger.error(f"check_stale_instruments failed: {e}")
     else:
-        logger.info(f"--- {step_label('parse')}: Parsing skipped ---")
+        logger.info(f"--- {step_label('check_stale')}: Parsing skipped ---")
 
 if __name__ == "__main__":
     main()

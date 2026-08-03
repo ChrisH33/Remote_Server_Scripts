@@ -65,7 +65,7 @@ def parse_datetime(
     try:
         return datetime.strptime(
             value,
-            "%Y-%m-%d %H:%M:%S",
+            "%d/%m/%Y %H:%M",
         )
 
     except ValueError:

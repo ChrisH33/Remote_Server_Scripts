@@ -29,11 +29,11 @@ DAYS_BEFORE_STALE = 45
 # =========================================================================
 
 STEPS_TO_RUN = {
-    "parse_logs":   True,   # Condense traces into a single .csv
+    "parse_logs":   False,   # Condense traces into a single .csv
     "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
-    "create_hyper": True,   # Convert tidy csv into a hyper file
-    "publish":      True,   # Push hyper file to Tableau server
-    "check_stale":  True,   # Create a warning if an instrument has gone quiet for too long
+    "create_hyper": False,   # Convert tidy csv into a hyper file
+    "publish":      False,   # Push hyper file to Tableau server
+    "check_stale":  False,   # Create a warning if an instrument has gone quiet for too long
 }
 
 # =========================================================================
@@ -201,6 +201,9 @@ PROCESS_TYPES = {
         "CLCM_EM_PCR_XP": [
             "CLCM_EM_PCR_XP_STAR6",
         ],
+        "cDNA_XP_Heron_384": [
+            "cDNA_XP_Heron_384_v1.0",
+        ],
         "Double-Sided SPRI": [
             "DOUBLE-SIDED SPRI V1.0",
             "DOUBLE-SIDED SPRI V1.1_SVL",
@@ -222,15 +225,30 @@ PROCESS_TYPES = {
             "DOUBLE-SIDED SPRI V1.8",
             "DOUBLE-SIDED SPRI V1.8_QUICK PLATE MOVEMENT",
             "DOUBLE-SIDED SPRI V1.9_SVL",
+            "AT_COPYDouble-Sided SPRI v1.15_3method option_SVL_IB3",
         ],
         "Generic_SPRI_CleanUp": [
             "GENERIC_BEAD_CLEANUP",
             "GENERIC_SPRI_CLEANUP",
         ],
+        "LCMT_EM_PCR_XP": [
+            "LCMT_EM_PCR_XP",
+        ],
+        "Post_PCR_XP": [
+            "Post_PCR_XP",
+        ],
+        "ResO_DNA_Cleanup": [
+            "ResO_DNA_Lib_Cleanup",
+        ],
+        "RVI_BC_1xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP": [
+            "RVI_BC_1xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
+            "RVI_BC_1_BIORAD_PLATE_ISC_PCR_XP_STAR6"
+        ],
         "RVI_BC_POST_CAPTURE_XP_0.8X": [
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR4",
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR5",
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR6",
+            "RVI_BC_0.8xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
         ],
         "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X": [
             "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X_STAR4",
@@ -255,11 +273,21 @@ PROCESS_TYPES = {
             "SINGLE-SIDED SPRI V1.7_SVL_AJ",
             "SINGLE-SIDED SPRI V1.8_SVL_3METHOD OPTION",
             "SINGLE-SIDED SPRI V1.9_SVL_3METHOD OPTION",
+            "test tRANSFORMER Single-Sided SPRI v1.12_IB3_3method option",
         ],
         "scRNA Core Post cDNA Amp Cleanup": [
             "SCRNA CORE POST CDNA AMP CLEANUP_V1",
             "SCRNA CORE POST CDNA AMP CLEANUP_V2",
             "SCRNA CORE POST CDNA AMP CLEANUP_V3",
+        ],
+        "SPRI_cleanup": [
+            "SPRI_cleanup_AT_AC",
+        ],
+        "Twist Post-Capture Purification": [
+            "Twist Post-Capture Purification v1",
+        ],
+        "Twist Post-Hyb Washes": [
+            "Twist Post-Hyb Washes v1",
         ],
         "Ultima_SingleSidedCleanUp": [
             "ULTIMA_SINGLESIDEDCLEANUP",
@@ -299,12 +327,12 @@ PROCESS_TYPES = {
             "CRICK_BEADEXTRACTION__STAR#495D_V0.0.1",
             "CRICK_BEADEXTRACTION__STAR#495D_V0.0.2",
         ],
+        "MagMax_BeadExtraction_NoCooledCarriers": [
+            "MagMax_BeadExtraction_NoCooledCarriers_STAR#495Dv1.0.7",
+            "MagMaxIsopropanol_BeadExtraction_STAR#495Dv1.0.9",
+        ],
     },
     "Sample Dilution": {
-        "Redilute Echo Plate": [
-            "REDILUTE CONCENTRATED ECHO SOURCE PLATE V1.0",
-            "REDILUTE CONCENTRATED ECHO SOURCE PLATE V1.1",
-        ],
         "BotSeq_Sample Dilution": [
             "BOT-SEQ_SAMPLE_DILUTION V1.10_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
             "BOT-SEQ_SAMPLE_DILUTION V1.11_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
@@ -326,23 +354,8 @@ PROCESS_TYPES = {
             "BOT-SEQ_SAMPLE_DILUTION V1.9_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
             "BOT-SEQ_SAMPLE DILUTION V1.10_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
             "BOT-SEQ_SAMPLE DILUTION V1.11_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
-            "BOT-SEQ_SAMPLE DILUTION V1.12_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON"
-        ],
-        "SampleNormalisation_CherryPicking": [
-            "SAMPLENORMALISATION_CHERRYPICKING",
-        ],
-        "Sample Dilution": [
-            "SAMPLE DILUTION V1.0",
-            "SAMPLE DILUTION V1.1",
-            "SAMPLE DILUTION V1.2",
-            "SAMPLE DILUTION V1.3 AFTER ANDY CHANGES",
-            "SAMPLE DILUTION V1.4",
-            "SAMPLE DILUTION V1.5",
-            "SAMPLE DILUTION V2.0",
-            "SAMPLE DILUTION_QUICK METHOD",
-        ],
-        "SGE-MAVE_SampleDilution": [
-            "SGE_SAMPLEDILUTION_V2.0",
+            "BOT-SEQ_SAMPLE DILUTION V1.12_UNIVERSAL DILUTION SCRIPT DIRECT AND INDIRECT_TIP LOCATION_NAPOLEON",
+            "Bot-seq_FixedVolume Sample Dilution v1.5",
         ],
         "LibraryDilution": [
             "LIBRARYDILUTION_V0.1",
@@ -362,48 +375,31 @@ PROCESS_TYPES = {
             "LIBRARYDILUTION_V0.93",
             "LIBRARYDILUTION_V1.0",
         ],
+        "Redilute Echo Plate": [
+            "REDILUTE CONCENTRATED ECHO SOURCE PLATE V1.0",
+            "REDILUTE CONCENTRATED ECHO SOURCE PLATE V1.1",
+        ],
+        "SampleNormalisation_CherryPicking": [
+            "SAMPLENORMALISATION_CHERRYPICKING",
+        ],
+        "Sample Dilution": [
+            "SAMPLE DILUTION V1.0",
+            "SAMPLE DILUTION V1.1",
+            "SAMPLE DILUTION V1.2",
+            "SAMPLE DILUTION V1.3 AFTER ANDY CHANGES",
+            "SAMPLE DILUTION V1.4",
+            "SAMPLE DILUTION V1.5",
+            "SAMPLE DILUTION V2.0",
+            "SAMPLE DILUTION_QUICK METHOD",
+        ],
+        "SGE-MAVE_SampleDilution": [
+            "SGE_SAMPLEDILUTION_V2.0",
+        ],
+
     },
     "Pooling": {
-        "LoadToFC_SangerInstitute_Plates": [
-            "LOADTOFC_SANGERINSTITUTE_PLATES_V0.2",
-        ],
-        "LoadToFC_SangerInstitute_Tubes": [
-            "LOADTOFC_SANGERINSTITUTE_TUBES_V0.1",
-            "LOADTOFC_SANGERINSTITUTE_TUBES_V0.4",
-            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.1",
-            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.2",
-            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.3",
-        ],
-        "PoolSample": [
-            "POOLSAMPLE_V1",
-            "POOLSAMPLE_V2",
-            "POOLSAMPLE_V2.1",
-            "POOLSAMPLE_V2.2",
-            "POOLSAMPLE_V2.3",
-            "POOLSAMPLE_V2.4",
-            "POOLSAMPLE_V2.4A",
-            "POOLSAMPLE_V2.4A MODIFIED FOR TESTING",
-            "POOLSAMPLE_V2.5",
-            "POOLSAMPLE_V2.5STARLAB",
-            "POOLSAMPLE_V2.6",
-            "POOLSAMPLE_V2.6A",
-            "POOLSAMPLE_V2.6B",
-            "POOLSAMPLE_V2.6B_FINAL",
-            "POOLSAMPLE_V2.6B_TEST",
-            "POOLSAMPLE_V2.7",
-            "POOLSAMPLE_V2.7_NXT",
-            "POOLSAMPLES_V3.0",
-            "POOLSAMPLES_V3.2",
-            "POOLSAMPLES_V5.0",
-            "POOLSAMPLES_V5.1",
-            "POOLSAMPLES_V6",
-            "POOLSAMPLES_V7",
-        ],
-        "Pooling Sangerised": [
-            "Pooling",
-            "POOLING SANGERISED",
-            "POOLING SANGERISED V2",
-            "POOLING SANGERISED2",
+        "384 1-24 Pooling": [
+            "IB3 384 1-24 pooling protocol",
         ],
         "96 Pool Sample": [
             "96POOLSAMPLE_V1.1",
@@ -459,6 +455,48 @@ PROCESS_TYPES = {
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_BEDVER_OGILVIE_H5",
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H5",
+            "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_HeronLab_H5",
+        ],
+        "LoadToFC_SangerInstitute_Plates": [
+            "LOADTOFC_SANGERINSTITUTE_PLATES_V0.2",
+        ],
+        "LoadToFC_SangerInstitute_Tubes": [
+            "LOADTOFC_SANGERINSTITUTE_TUBES_V0.1",
+            "LOADTOFC_SANGERINSTITUTE_TUBES_V0.4",
+            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.1",
+            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.2",
+            "LOADTOFC_SANGERINSTITUTE_TUBES_V1.3",
+        ],
+        "PoolSample": [
+            "POOLSAMPLE_V1",
+            "POOLSAMPLE_V2",
+            "POOLSAMPLE_V2.1",
+            "POOLSAMPLE_V2.2",
+            "POOLSAMPLE_V2.3",
+            "POOLSAMPLE_V2.4",
+            "POOLSAMPLE_V2.4A",
+            "POOLSAMPLE_V2.4A MODIFIED FOR TESTING",
+            "POOLSAMPLE_V2.5",
+            "POOLSAMPLE_V2.5STARLAB",
+            "POOLSAMPLE_V2.6",
+            "POOLSAMPLE_V2.6A",
+            "POOLSAMPLE_V2.6B",
+            "POOLSAMPLE_V2.6B_FINAL",
+            "POOLSAMPLE_V2.6B_TEST",
+            "POOLSAMPLE_V2.7",
+            "POOLSAMPLE_V2.7_NXT",
+            "POOLSAMPLES_V3.0",
+            "POOLSAMPLES_V3.2",
+            "POOLSAMPLES_V5.0",
+            "POOLSAMPLES_V5.1",
+            "POOLSAMPLES_V6",
+            "POOLSAMPLES_V7",
+        ],
+        "Pooling Sangerised": [
+            "Pooling",
+            "POOLING SANGERISED",
+            "POOLING SANGERISED V2",
+            "POOLING SANGERISED2",
         ],
         "PoolSample_Single_Plate": [
             "PoolSample_single_plate_V1_NXT",
@@ -469,6 +507,7 @@ PROCESS_TYPES = {
         ],
         "Pool384Plates": [
             "Pool384Platesv1",
+            "Pool384Platev1"
         ],
     },
     "Cherry Picking": {
@@ -500,6 +539,14 @@ PROCESS_TYPES = {
         ],
         "SGE-MAVE_Cherrypick_EppendorfPlateTo3Plates": [
             "SGE-MAVE_CHERRYPICK_EPPENDORFPLATETO3PLATES",
+        ],
+    },
+    "Loading": {
+        "Fluidigm_Chip_Loading": [
+            "Fluidigm_Chip_Loading_Hamilton_v1.0",
+        ],
+        "accuclear method": [
+            "accuclear method"
         ],
     },
     "Testing": {
