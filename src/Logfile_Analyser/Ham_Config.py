@@ -31,8 +31,8 @@ DAYS_BEFORE_STALE = 45
 STEPS_TO_RUN = {
     "parse_logs":   False,   # Condense traces into a single .csv
     "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
-    "create_hyper": False,   # Convert tidy csv into a hyper file
-    "publish":      False,   # Push hyper file to Tableau server
+    "create_hyper": True,   # Convert tidy csv into a hyper file
+    "publish":      True,   # Push hyper file to Tableau server
     "check_stale":  False,   # Create a warning if an instrument has gone quiet for too long
 }
 
@@ -274,6 +274,7 @@ PROCESS_TYPES = {
             "SINGLE-SIDED SPRI V1.8_SVL_3METHOD OPTION",
             "SINGLE-SIDED SPRI V1.9_SVL_3METHOD OPTION",
             "test tRANSFORMER Single-Sided SPRI v1.12_IB3_3method option",
+            "Single-Sided SPRI v1.7_SVL_AJtest",
         ],
         "scRNA Core Post cDNA Amp Cleanup": [
             "SCRNA CORE POST CDNA AMP CLEANUP_V1",
@@ -544,6 +545,7 @@ PROCESS_TYPES = {
     "Loading": {
         "Fluidigm_Chip_Loading": [
             "Fluidigm_Chip_Loading_Hamilton_v1.0",
+            "Fluidigm_Chip_Teaching_Test_v1.0",
         ],
         "accuclear method": [
             "accuclear method"
@@ -584,9 +586,7 @@ PROCESS_TYPES = {
             "96 HEAD FLATNESS",
             "96 HEAD STOP DISK CHNAGE TEST",
             "AT_TESTMETHOD",
-            "Single-Sided SPRI v1.7_SVL_AJtest",
             "Grips",
-            "Fluidigm_Chip_Teaching_Test_v1.0",
             "BOO",
             "CH_TEST",
             "CLLD TEST",
@@ -633,6 +633,13 @@ PROCESS_TYPES = {
             "MIX TRANSFER TEST",
             "LIQUID_TEST_CLEAR_TIPS",
             "HSL HONEYWELL ORBIT DEMO",
+            "CooledCarrierDefinition",
+            "load instructions  cleanuponly v1.7",
+            "Ext_Ham_1.1.3_96",
+            "STA2_NO_BUFFER_Hamilton_v1.0",
+            "NEW_SNPtype_Plate_Hamilton_v1.0",
+            "PostCOVIDseq v0.22",
+            "Library Construction v0.1",
         ],
     },
     "Plate Stamping": {
