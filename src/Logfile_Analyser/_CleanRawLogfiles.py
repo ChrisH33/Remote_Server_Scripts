@@ -62,17 +62,22 @@ def parse_datetime(
         logger.warning("Missing datetime value")
         return None
 
-    try:
-        return datetime.strptime(
-            value,
-            "%d/%m/%Y %H:%M",
-        )
+    formats = (
+        "%Y-%m-%d %H:%M:%S",  # 2023-10-17 14:10:00
+        "%d/%m/%Y %H:%M",     # 17/10/2023 14:10
+    )
 
-    except ValueError:
-        logger.warning(
-            f"Could not parse datetime value: {value!r}"
-        )
-        return None
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    logger.warning(
+        f"Could not parse datetime value: {value!r}"
+    )
+    return None
+
 
 def add_calculated_fields(
     method: str,
