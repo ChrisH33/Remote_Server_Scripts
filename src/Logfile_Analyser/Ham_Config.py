@@ -40,7 +40,6 @@ STEPS_TO_RUN = {
 # CONFIG - the settings you're most likely to want to change
 # =========================================================================
 
-
 FILENAME_PREFIXES_TO_DROP = (
     "HxUsbComm",
     "ComTrace_Simulator",
@@ -168,11 +167,9 @@ PROCESS_TYPES = {
         "2_PLATE_10X_PSI_2X_SPRI": [
             "2_PLATE_10X_PSI_2X_SPRI",
         ],
-        "384WGS_PostShear_XP_Biorad": [
+        "384WGS_PostShear_XP": [
             "384WGS_POSTSHEAR_XPBIORAD",
             "384WGS_POSTSHEAR_XPBIORAD_V1.0",
-        ],
-        "384WGS_PostShear_XP": [
             "384 WGS POST SHEAR XP V0.1",
             "384 WGS POST SHEAR XP_BIORAD V0.1",
             "384 WGS POST SHEAR XP_BIORAD V0.4",
@@ -193,6 +190,16 @@ PROCESS_TYPES = {
             "IB3 96 WELLS BEAD CLEAN",
             "IB3 96 WELLS BEAD CLEAN V2",
             "96 WELLS BEAD CLEAN",
+        ],
+        "AMPure CleanUp 384 Plate": [
+            "AMPURE CLEANUP 384 WELL PLATE V1.3",
+            "AMPURE CLEANUP 384 WELL PLATE V1.4",
+            "AMPURE CLEANUP 384 WELL PLATE V1.2",
+            "AMPURE CLEANUP 384 WELL PLATE V1.6",
+            "AMPURE CLEANUP 384 WELL PLATE V1.7",
+        ],
+        "CLCM_EM_PCR_XP": [
+            "CLCM_EM_PCR_XP_STAR6",
         ],
         "Double-Sided SPRI": [
             "DOUBLE-SIDED SPRI V1.0",
@@ -219,30 +226,6 @@ PROCESS_TYPES = {
         "Generic_SPRI_CleanUp": [
             "GENERIC_BEAD_CLEANUP",
             "GENERIC_SPRI_CLEANUP",
-        ],
-        "AMPure CleanUp 384 Plate": [
-            "AMPURE CLEANUP 384 WELL PLATE V1.3",
-            "AMPURE CLEANUP 384 WELL PLATE V1.4",
-            "AMPURE CLEANUP 384 WELL PLATE V1.2",
-            "AMPURE CLEANUP 384 WELL PLATE V1.6",
-            "AMPURE CLEANUP 384 WELL PLATE V1.7",
-        ],
-        "CLCM_EM_PCR_XP": [
-            "CLCM_EM_PCR_XP_STAR6",
-        ],
-        "WorkFlow CleanupOnly": [
-            "WORKFLOW CLEANUPONLY V1.2",
-            "WORKFLOW CLEANUPONLY V1.3",
-            "WORKFLOW CLEANUPONLY V1.4",
-            "WORKFLOW CLEANUPONLY V1.6",
-            "WORKFLOW CLEANUPONLY V1.7",
-        ],
-        "Ultima_SingleSidedCleanUp": [
-            "ULTIMA_SINGLESIDEDCLEANUP",
-            "ULTIMA_SINGLESIDEDCLEANUPV1.1",
-        ],
-        "Ultima_DoubleSidedCleanUp": [
-            "ULTIMA_DOUBLESIDEDCLEANUP",
         ],
         "RVI_BC_POST_CAPTURE_XP_0.8X": [
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR4",
@@ -277,6 +260,20 @@ PROCESS_TYPES = {
             "SCRNA CORE POST CDNA AMP CLEANUP_V1",
             "SCRNA CORE POST CDNA AMP CLEANUP_V2",
             "SCRNA CORE POST CDNA AMP CLEANUP_V3",
+        ],
+        "Ultima_SingleSidedCleanUp": [
+            "ULTIMA_SINGLESIDEDCLEANUP",
+            "ULTIMA_SINGLESIDEDCLEANUPV1.1",
+        ],
+        "Ultima_DoubleSidedCleanUp": [
+            "ULTIMA_DOUBLESIDEDCLEANUP",
+        ],
+        "WorkFlow CleanupOnly": [
+            "WORKFLOW CLEANUPONLY V1.2",
+            "WORKFLOW CLEANUPONLY V1.3",
+            "WORKFLOW CLEANUPONLY V1.4",
+            "WORKFLOW CLEANUPONLY V1.6",
+            "WORKFLOW CLEANUPONLY V1.7",
         ],
     },
     "Extraction": {
