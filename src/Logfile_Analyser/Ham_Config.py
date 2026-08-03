@@ -503,7 +503,7 @@ PROCESS_TYPES = {
             "PoolSample_single_plate_V1_NXT",
             "PoolSample_single_plate_V1",
         ],
-        "pWGS_384_PoolSamples": [
+        "pWGS_384_PoolSammmmmmples": [
             "PWGS_384_POOLSAMPLES_V1.0",
         ],
         "Pool384Plates": [
