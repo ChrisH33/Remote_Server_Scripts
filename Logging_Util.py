@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-def get_logger(name: str, log_file: str | Path) -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     """
     Returns a logger that writes to both the console and a text file
     """
@@ -13,7 +13,7 @@ def get_logger(name: str, log_file: str | Path) -> logging.Logger:
 
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
 
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler = logging.FileHandler(Path.cwd()/ "_Logs" / name, encoding="utf-8")
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 

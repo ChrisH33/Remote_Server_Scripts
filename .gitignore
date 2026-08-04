@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 creds/
+SlackClientWrapper/_config.py
 
 # C extensions
 *.so
