@@ -8,7 +8,6 @@ LOG_FOLDER = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles\Ham
 PROCESSED_FOLDER = LOG_FOLDER / "Processed"
 MOVE_FILES_AFTER_PARSE = True
 
-
 OUTPUT_FILE = LOG_FOLDER / "CondensedLogs_Raw.csv" 
 TIDY_OUTPUT_FILE = LOG_FOLDER / "TidyLogs_ForTableau.csv"
 TABLEAU_FILE = LOG_FOLDER / "TidyLogs.hyper"
@@ -44,6 +43,7 @@ FILENAME_PREFIXES_TO_DROP = (
     "HxUsbComm",
     "ComTrace_Simulator",
     "Hamilton Backup Utility",
+    "BioMedInstrument",
 )
 
 STATUSES_TO_DROP = {
@@ -94,6 +94,7 @@ PROCESS_TYPES = {
             "1_PLATE_ISC_PCR_XP_STAR6",
             "1_BIORAD_PLATE_ISC_PCR_XP",
             "1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
+            "1_biorad_plate_isc_pcr_xp_v1.1",
         ],
         "1_PLATE_ISC_POST_CAP_PCR_XP": [
             "1_PLATE_ISC_POST_CAP_PCR_XP",
@@ -186,6 +187,17 @@ PROCESS_TYPES = {
         "384_RLT_XP": [
             "384_RLT_XP_V0.1",
         ],
+        "3.1X SPRI": [
+            "3.1X SPRI v0.2 TEST",
+            "3.1X SPRI v0.1",
+            "3.1X SPRI v0.2",
+            "3.1X SPRI v0.3",
+            "3.1X SPRI v0.4",
+            "3.1X SPRI v0.5",
+            "3.1X SPRI v0.6",
+            "3.1X SPRI v0.7",
+            "3.1X SPRI v0.9",
+        ],
         "96 wells bead clean": [
             "IB3 96 WELLS BEAD CLEAN",
             "IB3 96 WELLS BEAD CLEAN V2",
@@ -231,14 +243,35 @@ PROCESS_TYPES = {
             "GENERIC_BEAD_CLEANUP",
             "GENERIC_SPRI_CLEANUP",
         ],
+        "ISC_PCR_XP": [
+            "ISC_PCR_XP_v1.0",
+        ],
+        "ISC_Post_Cap_XP": [
+            "ISC_POST_CAP_XP_v1.0",
+        ],
         "LCMT_EM_PCR_XP": [
             "LCMT_EM_PCR_XP",
         ],
         "Post_PCR_XP": [
             "Post_PCR_XP",
         ],
+        "PostShear SPRI": [
+            "Post Shearing SPRI method v0.4",
+            "Post Shearing SPRI method v0.5.1",
+            "Post Shearing SPRI method v0.5.2",
+            "Post Shearing SPRI method v0.5.3",
+            "Post Shearing SPRI method v0.5.4",
+            "Post Shearing SPRI method",
+            "Post Shearing SPRI method v0.5",
+        ],
         "ResO_DNA_Cleanup": [
             "ResO_DNA_Lib_Cleanup",
+        ],
+        "RVI_BaitCapture_cDNA_XP": [
+            "RVI Bait Capture cDNA XP 1 Plate",
+        ],
+        "RVI_BaitCapture_Ligation_XP": [
+            "RVI Bait Capture Ligation XP 1 Plate",
         ],
         "RVI_BC_1xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP": [
             "RVI_BC_1xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
@@ -249,11 +282,14 @@ PROCESS_TYPES = {
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR5",
             "RVI_BC_POST_CAPTURE_XP_0.8X_STAR6",
             "RVI_BC_0.8xSPRITEST_1_BIORAD_PLATE_ISC_PCR_XP_STAR6",
+            "RVI_BC_POST_CAPTURE_XP_0.8X_STAR6JF18032025",
+            "RVI_BC_POST_CAPTURE_XP_0.8X_TipSupport_503F",
         ],
         "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X": [
             "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X_STAR4",
             "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X_STAR5",
             "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X_STAR6",
+            "RVI_BC_LIBRARY_CAPTURE_PCR_XP_1X_503F",
         ],
         "Single-Sided SPRI": [
             "SINGLE-SIDED SPRI V1.0",
@@ -429,6 +465,8 @@ PROCESS_TYPES = {
             "COVID-19_POOLSAMPLES_V0.11_HIGHDILUTE_BEDVER_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_V0.12_HIGHDILUTE_BEDVER_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_V0.12_HIGHDILUTE_BEDVER_OGILVIE_H5",
+            "COVID-19_PoolSamples_96w_v0.4_HighDilute_HeronLab",
+            "COVID-19_PoolSamples_96w_v0.5_HighDilute_HeronLab",
         ],
         "COVID-19_PoolSamples": [
             "COVID-19_POOLSAMPLES_V0.2",
@@ -447,6 +485,24 @@ PROCESS_TYPES = {
             "COVID-19_POOLSAMPLES_V0.8_HIGHDILUTE_OGILVIE_H5",
             "COVID-19_POOLSAMPLES_V0.9_HIGHDILUTE_BEDVER_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_V0.9_HIGHDILUTE_BEDVER_OGILVIE_H5",
+            "COVID-19_PoolSamples_v0.10_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_v0.12_HighDilute_BedVer_Heron_H1a",
+            "COVID-19_PoolSamples_v0.12_HighDilute_BedVer_Heron_H1",
+            "COVID-19_PoolSamples_v0.13_HighDilute_BedVer_Heron_H1",
+            "COVID-19_PoolSamples_v0.5_HighDilute_HeronLab",
+            "COVID-19_PoolSamples_v0.8_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_v0.7_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_v0.8_HighDilute_HeronLab_H1",
+            "COVID-19_PoolSamples_v0.9_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_v0.10_HighDilute_BedVer_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.12_HighDilute_BedVer_Heron_H2a",
+            "COVID-19_PoolSamples_v0.12_HighDilute_BedVer_Heron_H2",
+            "COVID-19_PoolSamples_v0.6_HighDilute_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.7_HighDilute_BedVer_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.7_HighDilute_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.8_HighDilute_BedVer_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.8_HighDilute_HeronLab_H2",
+            "COVID-19_PoolSamples_v0.9_HighDilute_BedVer_HeronLab_H2",
         ],
         "COVID-19_PoolSamples_Q1only": [
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.3_HIGHDILUTE_H4",
@@ -457,6 +513,16 @@ PROCESS_TYPES = {
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H4",
             "COVID-19_POOLSAMPLES_Q1ONLY_V0.5_HIGHDILUTE_OGILVIE_H5",
             "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_HeronLab_H5",
+            "COVID-19_PoolSamples_Q1only_v0.1_HighDilute_HeronLab",
+            "COVID-19_PoolSamples_Q1only_v0.2_HighDilute_HeronLab",
+            "COVID-19_PoolSamples_Q1only_v0.3_HighDilute_HeronLab",
+            "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_Q1only_v0.4_HighDilute_BedVer_HeronLab_H1",
+            "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_HeronLab_H1",
+            "COVID-19_PoolSamples_Q1only_v0.3_HighDilute_HeronLab_H2",
+            "COVID-19_PoolSamples_Q1only_v0.4_HighDilute_BedVer_HeronLab_H2",
+            "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_BedVer_HeronLab_H2",
+            "COVID-19_PoolSamples_Q1only_v0.5_HighDilute_HeronLab_H2",
         ],
         "LoadToFC_SangerInstitute_Plates": [
             "LOADTOFC_SANGERINSTITUTE_PLATES_V0.2",
@@ -514,6 +580,7 @@ PROCESS_TYPES = {
     "Cherry Picking": {
         "Cherry Pick": [
             "CHERRY PICK V1.0",
+            "Cherry Picking v1.0",
             "CHERRY PICK V1.1_SVL",
             "CHERRY PICK V1.1_SVL_AJ",
             "CHERRY PICK V1.1_SVL_NAPOLEON",
@@ -537,18 +604,43 @@ PROCESS_TYPES = {
             "CHERRYPICKING_COVID_V0.8",
             "CHERRYPICKING_COVID_V0.9",
             "CHERRYPICKING_COVID_V1.0",
+            "Cherry Picking CSV v1.0",
+            "Cherry Picking CSV 300 uL v1.0",
+            "Cherry Picking CSV 300 uL v1.2",
+            "Cherry Picking CSV 300 uL v1.4",
+            "Cherry Picking CSV 300 uL v1.3",
+            "Cherry Picking CSV 300 uL v1.5",
+            "Cherry Picking CSV 300 uL v1.6",
+            "Cherry Picking CSV 300 uL v1.7",
+            "Cherry Picking CSV 300 uL v1.8",
+            "Cherry Picking CSV 300 uL v1.9",
+            "Cherry Picking CSV 300 uL v2.0",
+            "Cherry Picking CSV 300 uL v2.1",
+            "Cherry Picking CSV 300 uL v2.3",
+
         ],
         "SGE-MAVE_Cherrypick_EppendorfPlateTo3Plates": [
             "SGE-MAVE_CHERRYPICK_EPPENDORFPLATETO3PLATES",
         ],
+        "Re-Array": [
+            "Rearray",
+            "Rearray HiC",
+        ],
+        "WSI Cherrypicking": [
+            "WSI Cherry picking error testing",
+        ],
     },
-    "Loading": {
+    "Assay Setup": {
         "Fluidigm_Chip_Loading": [
             "Fluidigm_Chip_Loading_Hamilton_v1.0",
             "Fluidigm_Chip_Teaching_Test_v1.0",
         ],
         "accuclear method": [
             "accuclear method"
+        ],
+        "RVI Bait Capture Tag PCR Setup": [
+            "RVI Bait Capture Tag PCR Setup",
+            "RVI Bait Capture Tag PCR Setup_Test",
         ],
     },
     "Testing": {
@@ -562,6 +654,14 @@ PROCESS_TYPES = {
             "GRAVIMETRIC 96 HEAD",
             "SANGER_384HEAD ARTEL V1.0",
             "SANGER_ARTEL MVS FOR CHANNELS AND MPH96 V2.7",
+            "Artel MVS for Channels and MPH96 V2.7",
+            "Sanger_Artel MVS for Channels and MPH96 Biosero V1",
+            "SAT Liquid Class Validation 300Tips",
+            "SAT Liquid Class Validation 50Tips",
+            "SAT Liquid Class Validation",
+            "Sanger_384Head Atrel v1.0",
+            "SAT Liquid Handling Contamination Test",
+            "SAT Temperature Test",
         ],
         "384 HeadCheck": [
             "384 HEADCHECK",
@@ -585,10 +685,19 @@ PROCESS_TYPES = {
             "SHEARING TESTS v0.9",
             "SHEARING TESTS v0.10",
             "Shearing tests v0.10 hack",
+            "Shearing Tests v0.11",
         ],
         "Test Methods": [
+            "1000 tip resuspend test",
             "AT_TESTMETHOD",
+            "test again",
+            "Test Method SPRI",
+            "Temp tests",
+            "Quick trial",
+            "Inheco height test",
+            "move test",
             "CH_TEST",
+            "Test no 96 head",
             "Single-Sided SPRI VDJ Z error test",
             "PlatePiercing_v1",
             "ALCOHOL_HANDLING_TEST_010520",
@@ -611,7 +720,14 @@ PROCESS_TYPES = {
             "TESTNUCPLATE_384 96X50UL",
         ],
         "Other": [
+            "Move the head",
+            "Core Grips",
+            "coregrip",
+            "Core96Head_Maintenance",
+            "Init",
+            "Shelly... or is it",
             "Grips",
+            "Channel_TipPickup",
             "BOO",
             "CLOSE YOUR JAWS",
             "DOWNHOLDERPIPETTING_V1",
@@ -628,6 +744,7 @@ PROCESS_TYPES = {
             "FUMBLES",
             "SHORT PIPETTING SCRIPT",
             "STARLINEDAILYMAINTENANCE",
+            "UVDecontaminationStar2LONG",
             "STARLINEWEEKLYMAINTENANCE",
             "TEMPEH11",
             "TIP HANDLING",
@@ -658,6 +775,7 @@ PROCESS_TYPES = {
         ],
         "Heron_96_to_384_consolidation": [
             "HERON_96_TO_384_CONSOLIDATION.V1.0",
+            "Heron_96_to_384_consolidation",
         ],
         "Combine 4x96": [
             "COMBINE 4X96_1.1",
@@ -675,6 +793,18 @@ PROCESS_TYPES = {
         ],
         "Axygen_3x384to12x96_quadrants_STAR": [
             "AXYGEN_3X384TO12X96_QUADRANTS_STAR_V1.1",
+        ],
+        "Reagent Transfer": [
+            "Reagent Transfer",
+        ],
+        "RVI DWP to SWP Stamp": [
+            "RVI DWP to SWP Stamp v0.1.5",
+            "RVI DWP to SWP Stamp v1.3",
+            "RVI DWP to SWP Stamp v1",
+        ],
+        "Heron_Tailed_PCR_consolidation": [
+            "Heron_Tailed_PCR_consolidation.v1.0",
+            "Heron_Tailed_PCR_consolidation.v1.0_TEST",
         ],
     }
 }

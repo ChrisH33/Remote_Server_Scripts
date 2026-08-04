@@ -1,12 +1,12 @@
 import sys
-from src.Logging_Util import get_logger
-from src.Logfile_Analyser import credentials as credentials
-from src.Logfile_Analyser import Bravo_Config as config
-from src.Logfile_Analyser.Bravo_ParseLogs import run_parser
-from src.Logfile_Analyser._CleanRawLogfiles import run_cleaner
-from src.Logfile_Analyser._CreateHyperFile import create_hyper_from_csv
-from src.Logfile_Analyser._PublishHyperToTableau import publish_hyper_to_tableau
-from src.Logfile_Analyser._CheckHistoricLogs import check_stale_instruments
+from Logging_Util import get_logger
+from Logfile_Analyser import credentials as credentials
+from Logfile_Analyser import Bravo_Config as config
+from Logfile_Analyser.Bravo_ParseLogs import run_parser
+from Logfile_Analyser._CleanRawLogfiles import run_cleaner
+from Logfile_Analyser._CreateHyperFile import create_hyper_from_csv
+from Logfile_Analyser._PublishHyperToTableau import publish_hyper_to_tableau
+from Logfile_Analyser._CheckHistoricLogs import check_stale_instruments
 
 workflow = config.STEPS_TO_RUN
 
