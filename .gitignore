@@ -182,3 +182,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 Temp/config.py
+_Logs/Bravo_parse

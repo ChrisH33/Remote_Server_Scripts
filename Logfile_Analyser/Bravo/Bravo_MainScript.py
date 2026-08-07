@@ -1,6 +1,6 @@
 import sys
 from Logging_Util import get_logger
-from Logfile_Analyser.Hamilton import credentials as credentials
+from creds import Tableau_Credentials as credentials
 from Logfile_Analyser.Bravo import Bravo_Config as config
 from Logfile_Analyser.Bravo.Bravo_ParseLogs import run_parser
 from Logfile_Analyser._CleanRawLogfiles import run_cleaner
@@ -12,7 +12,7 @@ workflow = config.STEPS_TO_RUN
 
 STEP_ORDER = list(workflow.keys())
 
-logger = get_logger("Bravo_parse",config.PYTHON_LOG_FILE)
+logger = get_logger("Bravo_parse")
 
 def step_label(key: str) -> str:
     return f"Step {STEP_ORDER.index(key) + 1}/{len(STEP_ORDER)}"
@@ -28,6 +28,13 @@ def main() -> None:
         logger.info(f"--- {step_label('parse_logs')}: Parsing raw .trc log files ---")
         try:
             run_parser(
+                log_folder=config.LOG_FOLDER,
+                processed_folder=config.PROCESSED_FOLDER,
+                ignored_folders={config.PROCESSED_FOLDER, config.TRACE_FOLDER},
+                output_file=config.OUTPUT_FILE,
+                fields=config.FIELDS,
+                move_files_after_parse=config.MOVE_FILES_AFTER_PARSE,
+                logger=logger
             )
         except Exception:
             logger.exception("Parsing step failed - stopping pipeline")
@@ -48,8 +55,6 @@ def main() -> None:
                     statuses_to_drop=config.STATUSES_TO_DROP,
                     filename_prefixes_to_drop=config.FILENAME_PREFIXES_TO_DROP,
                     process_types=config.PROCESS_TYPES,
-                    method_simplified=config.METHOD_SIMPLIFIED,
-                    pipeline_codes=config.PIPELINE_CODES,
                     logger=logger,
                 )
             else:
@@ -122,7 +127,7 @@ def main() -> None:
         except Exception as e:
             logger.error(f"check_stale_instruments failed: {e}")
     else:
-        logger.info(f"--- {step_label('parse')}: Parsing skipped ---")
+        logger.info(f"--- {step_label('check_stale')}: Check stale skipped ---")
 
 if __name__ == "__main__":
     main()

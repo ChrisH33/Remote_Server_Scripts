@@ -1,8 +1,12 @@
 from pathlib import Path
+from typing import Optional
 from datetime import datetime
+from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
 import os
+import shutil
+import sys
 import re
 
 
@@ -10,6 +14,7 @@ import re
 # CONFIG
 # ============================================================================
 
+SERIAL_RE = re.compile(r"(Bravo\s*-\s*\d+)", re.IGNORECASE)
 MAX_WORKERS = min(4, os.cpu_count() or 4)
 FILE_EXTENSION = "*.log"
 TIMESTAMP_FORMATS = (
@@ -21,14 +26,18 @@ PATTERNS = {
     "runset": "starting runset :",
     "protocol_added": "runset manager: added the run",
     "protocol_file": ".pro",
-    "error": "error",
-    "warning": "warning",
-    "complete": "scheduler stopped",
+    "complete": "main protocol complete",
     "logout": "logged out",
 }
+END_PATTERNS = (
+    "complete",
+)
+ABORT_PATTERNS = (
+    "logout",
+)
 
 # ============================================================================
-# FUNCTIONS
+# HELPERS
 # ============================================================================
 
 def parse_timestamp(value: str):
@@ -52,7 +61,7 @@ def extract_timestamp(line):
 
     return parse_timestamp(parts[0])
 
-def extract_protocol(line):
+def extract_method(line):
     """
     Extract .pro filename from a Bravo line.
     """
@@ -85,194 +94,123 @@ def extract_runset(line):
 # RUN OBJECT
 # ============================================================================
 
+@dataclass
 class BravoRun:
-
-    def __init__(self, logfile):
-
-        self.logfile = logfile
-
-        self.instrument = None
-        self.runset = None
-        self.protocol = None
-
-        self.start_time = None
-        self.end_time = None
-
-        self.status = "Incomplete"
-
-        self.errors = 0
-        self.warnings = 0
-
-
-    def to_row(self):
-
-        return [
-            self.logfile.name,
-            self.instrument,
-            self.runset,
-            self.protocol,
-            self.start_time,
-            self.end_time,
-            self.status,
-            self.errors,
-            self.warnings,
-        ]
+    instrument: Optional[str] = None
+    uniqueID: Optional[str] = None
+    status: str = "Incomplete"
+    sim_mode: Optional[str] = None
+    method: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
 
 # ============================================================================
 # PARSER
 # ============================================================================
 
-def parse_bravo_file(logfile: Path):
+def parse_bravo_file(logfile: Path, logger):
     runs = []
     current_run = None
 
     try:
-        with logfile.open(
-            "r",
-            encoding="utf-8",
-            errors="ignore",
-        ) as file:
+        with logfile.open("r", encoding="utf-8", errors="ignore") as file:
             for raw_line in file:
                 line = raw_line.rstrip("\n")
-                lower = line.lower()
-                timestamp = extract_timestamp(line)
+                line_lower = line.lower()
 
                 # ---------------------------------------------------------
                 # New run detected
                 # ---------------------------------------------------------
-                if PATTERNS["run_start"] in lower:
+                if PATTERNS["run_start"] in line_lower:
                     if current_run:
                         runs.append(current_run)
-                    current_run = BravoRun(logfile)
-                    current_run.start_time = timestamp
-                    protocol = extract_protocol(line)
+                        logger.info("run start appended")
 
-                    if protocol:
-                        current_run.protocol = protocol
+                    current_run = BravoRun()
+                    current_run.start_time = extract_timestamp(line)
+
+                    method = extract_method(line)
+                    if method:
+                        current_run.method = method
+
 
                 # Ignore pre-run information
                 if current_run is None:
                     continue
 
                 # ---------------------------------------------------------
-                # Runset
+                # Method extraction
                 # ---------------------------------------------------------
-
-                if PATTERNS["runset"] in lower:
-                    current_run.runset = extract_runset(line)
-
-                # ---------------------------------------------------------
-                # Protocol extraction
-                # ---------------------------------------------------------
-                if current_run.protocol is None:
-                    protocol = extract_protocol(line)
-                    if protocol:
-                        current_run.protocol = protocol
+                if current_run.method is None:
+                    method = extract_method(line)
+                    if method:
+                        current_run.method = method
 
                 # ---------------------------------------------------------
                 # Instrument
                 # ---------------------------------------------------------
                 if current_run.instrument is None:
-                    match = re.search(
-                        r"(Bravo\s*-\s*\d+)",
-                        line,
-                        re.IGNORECASE,
-                    )
-
+                    match = SERIAL_RE.search(line_lower)
                     if match:
                         current_run.instrument = match.group(1)
 
                 # ---------------------------------------------------------
-                # Errors / warnings
+                # Unique ID
                 # ---------------------------------------------------------
-                if "\terror\t" in lower:
-                    current_run.errors += 1
-
-                elif "\twarning\t" in lower:
-                    current_run.warnings += 1
+                if current_run.method and current_run.start_time:
+                    current_run.uniqueID = (
+                        f"{current_run.instrument}_"
+                        f"{current_run.start_time:%Y%m%d_%H%M%S}_"
+                        f"{current_run.method}"
+                    )
 
                 # ---------------------------------------------------------
                 # Run completion
                 # ---------------------------------------------------------
+                is_end = any(PATTERNS[key] in line_lower for key in END_PATTERNS)
+                is_abort = any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
 
-                if (
-                    PATTERNS["logout"] in lower
-                    or PATTERNS["complete"] in lower
-                ):
-
-                    current_run.end_time = timestamp
-                    current_run.status = "Complete"
-
-
+                if (is_end or is_abort) and current_run.end_time is None:
+                    current_run.end_time = extract_timestamp(line)
+                    current_run.status = "Complete" if is_end else "Aborted"
 
     except OSError:
-
         return []
 
-
-
     # Save final run
-
     if current_run:
-
         runs.append(current_run)
 
-
-
     return runs
-
-
 
 # ============================================================================
 # CSV OUTPUT
 # ============================================================================
 
-
-FIELDS = [
-    ("filename", "Filename"),
-    ("instrument", "Instrument"),
-    ("runset", "Runset"),
-    ("protocol", "Protocol"),
-    ("start_time", "Start Time"),
-    ("end_time", "End Time"),
-    ("status", "Status"),
-    ("errors", "Errors"),
-    ("warnings", "Warnings"),
-]
-
-
 def write_results(
-    rows,
+    rows: list[list],
     output_file: Path,
-):
-
-    exists = output_file.exists()
+    fields: list[tuple[str, str]],
+) -> None:
+    """Write all parsed results to the CSV."""
 
     with output_file.open(
         "a",
         newline="",
         encoding="utf-8",
     ) as file:
-
         writer = csv.writer(file)
 
-        if not exists:
-
+        if output_file.stat().st_size == 0:
             writer.writerow(
-                [
-                    name
-                    for _, name in FIELDS
-                ]
+                [display_name for _, display_name in fields]
             )
 
         writer.writerows(rows)
 
-
-
 # ============================================================================
 # MAIN PARSER
 # ============================================================================
-
 
 def run_parser(
     log_folder: Path,
@@ -306,62 +244,93 @@ def run_parser(
         f"Found {total_files} files. "
         f"Processing with {MAX_WORKERS} workers..."
     )
-    
+
     # ---------------------------------------------------------
     # 2. Parse every file
     # ---------------------------------------------------------
 
+    results = []
 
-    with ProcessPoolExecutor(
-        max_workers=MAX_WORKERS
-    ) as executor:
-
-
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {
             executor.submit(
                 parse_bravo_file,
-                file,
-            ): file
-            for file in files
+                logfile,
+                logger,
+            ): logfile
+            for logfile in files
         }
 
-
-        for future in as_completed(futures):
-
+        for count, future in enumerate(as_completed(futures), start=1):
             logfile = futures[future]
+            try:
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+                    if count % 1000 == 0:
+                        logger.info(f"Processed {count}/{total_files} files")
+                    
+
+            except Exception:
+                logger.exception(f"Error processing {logfile.name}")
+    logger.info(f"Finished parsing {len(results)}/{total_files} files")
+
+    # ---------------------------------------------------------
+    # 3. Write all parsed results to CSV
+    # ---------------------------------------------------------
+
+    runs = [run for logfile_runs in results for run in logfile_runs]
+
+    rows = [
+        [
+            run.instrument,
+            run.uniqueID,
+            run.start_time,
+            run.end_time,
+            run.status,
+            run.sim_mode,
+            run.method,
+        ]
+        for run in runs
+    ]
+    existing_ids = set()
+
+    if output_file.exists():
+        with output_file.open("r", newline="", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            next(reader, None)  # Skip header
+            existing_ids = {row[1] for row in reader if len(row) > 1}
+    new_rows = [row for row in rows if row[1] not in existing_ids]
+    if new_rows:
+        write_results(new_rows, output_file, fields)
+        logger.info(f"Saved {len(new_rows)} new results to {output_file}")
+    else:
+        logger.info("No new results to save")
+
+    # ---------------------------------------------------------
+    # 4. Move all parsed files to Processed
+    # ---------------------------------------------------------
+
+    logger.info("Moving parsed files to Processed...")
+    if move_files_after_parse:
+        for logfile, _ in results:
+            instrument_folder = logfile.parent.name
+            destination_folder = (processed_folder / instrument_folder)
+
+            destination_folder.mkdir(parents=True, exist_ok=True)
+            destination = (destination_folder / logfile.name)
+
 
             try:
-
-                runs = future.result()
-
-                for run in runs:
-
-                    results.append(
-                        run.to_row()
-                    )
-
-
-            except Exception as e:
-
-                print(
-                    f"Failed {logfile}: {e}"
+                shutil.move(str(logfile), str(destination))
+            except OSError as e:
+                logger.warning(
+                    f"Parsed {logfile.name}, "
+                    f"but could not move it: {e}"
                 )
+    else:
+        logger.info("Skipping logfile transfer")
 
-
-
-    if results:
-
-        write_results(
-            results,
-            output_file,
-        )
-
-
-
-    print(
-        f"Processed {len(files)} Bravo logs"
-    )
-
-    print(
-        f"Extracted {len(results)} runs"
+    logger.info(
+        f"Finished. {len(rows)} results saved to {Path(output_file).name}"
     )
