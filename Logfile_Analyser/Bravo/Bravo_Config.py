@@ -6,7 +6,7 @@ LOG_FOLDER = Path(r"C:\Users\ch33\Documents\Bravo")
 
 
 PROCESSED_FOLDER = LOG_FOLDER / "Processed"
-MOVE_FILES_AFTER_PARSE = False
+MOVE_FILES_AFTER_PARSE = True
 
 OUTPUT_FILE = LOG_FOLDER / "CondensedLogs_Raw.csv" 
 TIDY_OUTPUT_FILE = LOG_FOLDER / "TidyLogs_ForTableau.csv"
@@ -45,10 +45,7 @@ STATUSES_TO_DROP = {
 }
 
 FILENAME_PREFIXES_TO_DROP = (
-    "HxUsbComm",
-    "ComTrace_Simulator",
-    "Hamilton Backup Utility",
-    "hamilton backup utility"
+    "vworks_pipette_log",
 )
 
 PROCESS_TYPES = {

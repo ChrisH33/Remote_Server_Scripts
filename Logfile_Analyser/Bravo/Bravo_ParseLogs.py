@@ -6,7 +6,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import csv
 import os
 import shutil
-import sys
 import re
 
 
@@ -15,7 +14,7 @@ import re
 # ============================================================================
 
 SERIAL_RE = re.compile(r"(Bravo\s*-\s*\d+)", re.IGNORECASE)
-MAX_WORKERS = min(4, os.cpu_count() or 4)
+MAX_WORKERS = min(8, os.cpu_count() or 8)
 FILE_EXTENSION = "*.log"
 TIMESTAMP_FORMATS = (
     "%m/%d/%Y %I:%M:%S %p",
@@ -127,12 +126,12 @@ def parse_bravo_file(logfile: Path, logger):
                         logger.info("run start appended")
 
                     current_run = BravoRun()
+                    current_run.instrument = logfile.parent.name
                     current_run.start_time = extract_timestamp(line)
 
                     method = extract_method(line)
                     if method:
                         current_run.method = method
-
 
                 # Ignore pre-run information
                 if current_run is None:
@@ -145,14 +144,6 @@ def parse_bravo_file(logfile: Path, logger):
                     method = extract_method(line)
                     if method:
                         current_run.method = method
-
-                # ---------------------------------------------------------
-                # Instrument
-                # ---------------------------------------------------------
-                if current_run.instrument is None:
-                    match = SERIAL_RE.search(line_lower)
-                    if match:
-                        current_run.instrument = match.group(1)
 
                 # ---------------------------------------------------------
                 # Unique ID
@@ -263,14 +254,13 @@ def run_parser(
 
         for count, future in enumerate(as_completed(futures), start=1):
             logfile = futures[future]
+
             try:
                 result = future.result()
                 if result is not None:
-                    results.append(result)
+                    results.append((logfile, result))
                     if count % 1000 == 0:
-                        logger.info(f"Processed {count}/{total_files} files")
-                    
-
+                        logger.info(f"Processed {count}/{total_files} files") 
             except Exception:
                 logger.exception(f"Error processing {logfile.name}")
     logger.info(f"Finished parsing {len(results)}/{total_files} files")
@@ -278,8 +268,8 @@ def run_parser(
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
     # ---------------------------------------------------------
-
-    runs = [run for logfile_runs in results for run in logfile_runs]
+    
+    runs = [run for _, logfile_runs in results for run in logfile_runs]
 
     rows = [
         [
