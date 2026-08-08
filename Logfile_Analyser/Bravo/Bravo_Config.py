@@ -29,7 +29,7 @@ DAYS_BEFORE_STALE = 45
 
 STEPS_TO_RUN = {
     "parse_logs":   True,   # Condense traces into a single .csv
-    "clean_logs":   False,   # Tidy raw csv into a Tableau-ready csv
+    "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
     "create_hyper": False,   # Convert tidy csv into a hyper file
     "publish":      False,   # Push hyper file to Tableau server
     "check_stale":  False,   # Create a warning if an instrument has gone quiet for too long
