@@ -8,7 +8,7 @@ LOG_FOLDER = Path(r"C:\Users\ch33\Documents")
 
 # ----- Pick the Instrument -----
 INSTRUMENT = "Bravo"
-INSTRUMENT = "Hamilton"
+# INSTRUMENT = "Hamilton"
 
 # =========================================================================
 # CONFIG - the settings you're most likely to want to change

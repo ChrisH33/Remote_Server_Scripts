@@ -8,7 +8,7 @@ STEPS_TO_RUN = {
     "parse_logs":   True,   # Condense traces into a single .csv
     "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
     "create_hyper": True,   # Convert tidy csv into a hyper file
-    "publish":      False,   # Push hyper file to Tableau server
+    "publish":      True,   # Push hyper file to Tableau server
     "check_stale":  True,   # Create a warning if an instrument has gone quiet for too long
     "send_slack":   True,   # Send an update to Slack informing users of run success
 }
