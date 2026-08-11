@@ -20,8 +20,8 @@ def _last_seen_by_instrument(file: Path) -> dict[str, datetime]:
     return last_seen
 
 
-def _find_stale(log_folder: Path, processed_folder: Path, trace_folder: Path, last_seen: dict, cutoff: datetime, now: datetime, logger):
-    ignored = {processed_folder.resolve(), trace_folder.resolve()}
+def _find_stale(log_folder: Path, processed_folder: Path, last_seen: dict, cutoff: datetime, now: datetime, logger):
+    ignored = {processed_folder.resolve()}
     stale = []
     for instrument_dir in log_folder.iterdir():
         if not instrument_dir.is_dir() or instrument_dir.resolve() in ignored:
@@ -63,7 +63,6 @@ def check_stale_instruments(
     stale_days: int,
     log_folder: Path,
     processed_folder: Path,
-    trace_folder: Path,
     warning_file: Path,
     logger
 ) -> None:
@@ -72,7 +71,7 @@ def check_stale_instruments(
     cutoff = now - timedelta(days=stale_days)
 
     last_seen = _last_seen_by_instrument(file)
-    stale = _find_stale(log_folder, processed_folder, trace_folder, last_seen, cutoff, now, logger)
+    stale = _find_stale(log_folder, processed_folder, last_seen, cutoff, now, logger)
 
     if not stale:
         logger.info(f"All instruments have reported activity within the last {stale_days} days.")

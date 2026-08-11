@@ -46,6 +46,11 @@ def main(instrument: str) -> None:
     workflow = configDev.STEPS_TO_RUN
     STEP_ORDER = list(workflow.keys())
 
+    # Check the Instrument Config is loaded correctly
+    if instrument.lower() not in configGen.LOG_FOLDER.name.lower():
+        logger.info(f"!! Wrong instrument selected in Main_Config.py")
+        return
+
     def step_label(key: str) -> str:
         return f"Step {STEP_ORDER.index(key) + 1}/{len(STEP_ORDER)}"
 
@@ -57,7 +62,7 @@ def main(instrument: str) -> None:
             run_parser(
                 log_folder=configGen.LOG_FOLDER,
                 processed_folder=configGen.PROCESSED_FOLDER,
-                ignored_folders={configGen.PROCESSED_FOLDER, configGen.TRACE_FOLDER},
+                ignored_folders={configGen.PROCESSED_FOLDER},
                 output_file=configGen.OUTPUT_FILE,
                 fields=configGen.FIELDS,
                 move_files_after_parse=configGen.MOVE_FILES_AFTER_PARSE,
@@ -82,7 +87,7 @@ def main(instrument: str) -> None:
                     tidy_fields=configGen.TIDY_FIELDS,
                     statuses_to_drop=configDev.STATUSES_TO_DROP,
                     filename_prefixes_to_drop=configDev.FILENAME_PREFIXES_TO_DROP,
-                    process_types=configDev.PROCESS_TYPES,
+                    process_types=configGen.PROCESS_TYPES,
                     logger=logger,
                 )
             else:
@@ -147,7 +152,6 @@ def main(instrument: str) -> None:
                     configGen.DAYS_BEFORE_STALE,
                     configGen.LOG_FOLDER,
                     configGen.PROCESSED_FOLDER,
-                    configGen.TRACE_FOLDER,
                     configGen.STALE_INSTRUMENTS,
                     logger)
             else:
