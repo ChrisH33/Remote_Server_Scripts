@@ -3,44 +3,17 @@ from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import Logfile_Analyser.Bravo.Bravo_Config as config
 import csv
-import os
 import shutil
 import re
-
-
-# ============================================================================
-# CONFIG
-# ============================================================================
-
-SERIAL_RE = re.compile(r"(Bravo\s*-\s*\d+)", re.IGNORECASE)
-MAX_WORKERS = min(8, os.cpu_count() or 8)
-FILE_EXTENSION = "*.log"
-TIMESTAMP_FORMATS = (
-    "%m/%d/%Y %I:%M:%S %p",
-    "%d/%m/%Y %H:%M:%S",
-)
-PATTERNS = {
-    "run_start": "startup protocol starting",
-    "runset": "starting runset :",
-    "protocol_added": "runset manager: added the run",
-    "protocol_file": ".pro",
-    "complete": "main protocol complete",
-    "logout": "logged out",
-}
-END_PATTERNS = (
-    "complete",
-)
-ABORT_PATTERNS = (
-    "logout",
-)
 
 # ============================================================================
 # HELPERS
 # ============================================================================
 
 def parse_timestamp(value: str):
-    for fmt in TIMESTAMP_FORMATS:
+    for fmt in config.TIMESTAMP_FORMATS:
         try:
             return datetime.strptime(value.strip(), fmt)
         except ValueError:
@@ -120,7 +93,7 @@ def parse_bravo_file(logfile: Path, logger):
                 # ---------------------------------------------------------
                 # New run detected
                 # ---------------------------------------------------------
-                if PATTERNS["run_start"] in line_lower:
+                if config.PATTERNS["run_start"] in line_lower:
                     if current_run:
                         runs.append(current_run)
                         logger.info("run start appended")
@@ -158,8 +131,8 @@ def parse_bravo_file(logfile: Path, logger):
                 # ---------------------------------------------------------
                 # Run completion
                 # ---------------------------------------------------------
-                is_end = any(PATTERNS[key] in line_lower for key in END_PATTERNS)
-                is_abort = any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
+                is_end = any(config.PATTERNS[key] in line_lower for key in config.END_PATTERNS)
+                is_abort = any(config.PATTERNS[key] in line_lower for key in config.ABORT_PATTERNS)
 
                 if (is_end or is_abort) and current_run.end_time is None:
                     current_run.end_time = extract_timestamp(line)
@@ -210,6 +183,7 @@ def run_parser(
     output_file: Path,
     fields: list[tuple[str, str]],
     move_files_after_parse: bool,
+    max_workers,
     logger,
 ) -> None:
 
@@ -228,12 +202,12 @@ def run_parser(
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
             continue
-        files.extend(entry.rglob(FILE_EXTENSION))
+        files.extend(entry.rglob(config.FILE_EXTENSION))
     total_files = len(files)
 
     logger.info(
         f"Found {total_files} files. "
-        f"Processing with {MAX_WORKERS} workers..."
+        f"Processing with {max_workers} workers..."
     )
 
     # ---------------------------------------------------------
@@ -242,7 +216,7 @@ def run_parser(
 
     results = []
 
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
                 parse_bravo_file,

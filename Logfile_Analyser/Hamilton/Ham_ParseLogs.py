@@ -1,49 +1,10 @@
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import Logfile_Analyser.Hamilton.Ham_Config as config
 import csv
-import re
 import shutil
-import os
 
-# =========================================================================
-# CONFIG - the settings you're most likely to want to change
-# =========================================================================
-
-METHOD_RE = re.compile(r"method file .*\\([^\\]+)\.hsl",re.IGNORECASE,)
-SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
-MAX_WORKERS = min(4, os.cpu_count() or 4)
-FILE_EXTENSION = "*.trc"
-
-PATTERNS = {
-    "start":            "system : start method - complete;",
-    "end_1":            "system : end method - start;",
-    "end_2":            "system : custom dialog - start; <method finished>",
-    "end_3":            "system : custom dialog - start; <protocol complete>",
-    "end_4":            "user : trace - complete; clean up completed",
-    "end_5":            "available button(s): <ok>,   default button: <ok>,   message: <end of uv decontamination process.>",
-    "end_6":            "microlab® star : end method command - start;",
-    "abort_1":          "system : abort method - start;",
-    "abort_2":          "system : method has been aborted by the user - complete;",
-    "abort_3":          "system : method has been aborted by the method - complete;",
-    "abort_4":          "system : execute method - error; an error occurred while running vector.",
-    "Method Name":      "system : analyze method - start; method file",
-    "serial":           "star : start method command - progress; serial number of instrument:",
-}
-ABORT_PATTERNS = (
-    "abort_1",
-    "abort_2",
-    "abort_3",
-    "abort_4",
-)
-END_PATTERNS = (
-    "end_1",
-    "end_2",
-    "end_3",
-    "end_4",
-    "end_5",
-    "end_6"
-)
 
 # =========================================================================
 # FUNCTIONS
@@ -86,14 +47,14 @@ def process_file(
                 line_lower = line.lower()
 
                 # Method name
-                if method is None and PATTERNS["Method Name"] in line_lower:
-                    match = METHOD_RE.search(line)
+                if method is None and config.PATTERNS["Method Name"] in line_lower:
+                    match = config.METHOD_RE.search(line)
                     if match:
                         method = match.group(1)
 
                 # Serial number / simulation mode
-                if sim_mode == "Sim" and PATTERNS["serial"] in line_lower:
-                    match = SERIAL_RE.search(line)
+                if sim_mode == "Sim" and config.PATTERNS["serial"] in line_lower:
+                    match = config.SERIAL_RE.search(line)
 
                     if match:
                         serial = match.group(1).strip()
@@ -103,15 +64,15 @@ def process_file(
 
                 # Start time
                 if start_time is None:
-                    if PATTERNS["start"] in line_lower:
+                    if config.PATTERNS["start"] in line_lower:
                         start_time = parse_timestamp(line, logfile.name, logger)
                         if start_time is None:
                             break
 
                 # End / abort
                 else:
-                    is_end = any(PATTERNS[key] in line_lower for key in END_PATTERNS)
-                    is_abort = any(PATTERNS[key] in line_lower for key in ABORT_PATTERNS)
+                    is_end = any(config.PATTERNS[key] in line_lower for key in config.END_PATTERNS)
+                    is_abort = any(config.PATTERNS[key] in line_lower for key in config.ABORT_PATTERNS)
 
                     if is_end or is_abort:
                         if len(previous_lines) >= 2:
@@ -193,6 +154,7 @@ def run_parser(
     output_file: Path,
     fields: list[tuple[str, str]],
     move_files_after_parse: bool,
+    max_workers,
     logger,
 ) -> None:
 
@@ -210,12 +172,12 @@ def run_parser(
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
             continue
-        files.extend(entry.rglob(FILE_EXTENSION))
+        files.extend(entry.rglob(config.FILE_EXTENSION))
     total_files = len(files)
 
     logger.info(
         f"Found {total_files} files. "
-        f"Processing with {MAX_WORKERS} workers..."
+        f"Processing with {max_workers} workers..."
     )
 
     # ---------------------------------------------------------
@@ -224,7 +186,7 @@ def run_parser(
 
     results = []
 
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
                 process_file,
