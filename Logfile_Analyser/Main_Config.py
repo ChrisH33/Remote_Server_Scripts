@@ -31,7 +31,13 @@ TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
 DAYS_BEFORE_STALE = 45
 STALE_INSTRUMENTS = LOG_FOLDER / "stale_instruments.txt"
 
+DAYS_TO_ANALYSE = 30
+
 MAX_WORKERS = min(8, os.cpu_count() or 8)
+
+# TIDY_OUTPUT_FILE = Path(r"C:\Users\ch33\Documents\Bravo\HourScaffold.csv")
+# TABLEAU_FILE = LOG_FOLDER / "DataScaffold.hyper"
+# TABLEAU_DATA_NAME = f"{INSTRUMENT} DataScaffold"
 
 # =========================================================================
 # CONFIG - the settings you're most likely to want to change

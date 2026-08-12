@@ -11,6 +11,14 @@ from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
+
+"""
+- update create hyper to work with multiple csvs
+- update send hyper to work with multiple hypers
+- update utilisation to function
+- update tableau with the new data
+"""
+
 # =========================================================================
 # INSTRUMENT REGISTRY
 # Everything that differs between instruments lives here. To add a new
@@ -54,10 +62,15 @@ def main(instrument: str) -> None:
     def step_label(key: str) -> str:
         return f"Step {STEP_ORDER.index(key) + 1}/{len(STEP_ORDER)}"
 
+    def step_error(step):
+        logger.exception(f"!! {step_label(step)} failed - stopping workflow")
+        sys.exit(1)
+
     # 1. Parse Raw Logfiles (instrument-specific parser)
     # ---------------------------------------------------------------------
-    if workflow["parse_logs"]:
-        logger.info(f"--- {step_label('parse_logs')}: Parsing raw .trc log files ---")
+    step = "parse_logs"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             run_parser(
                 log_folder=configGen.LOG_FOLDER,
@@ -70,15 +83,15 @@ def main(instrument: str) -> None:
                 logger=logger
             )
         except Exception:
-            logger.exception("Parsing step failed - stopping pipeline")
-            sys.exit(1)
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('parse_logs')}: Parsing skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
     # 2. Tidy Raw Logfiles
     # ---------------------------------------------------------------------
-    if workflow["clean_logs"]:
-        logger.info(f"--- {step_label('clean_logs')}: Cleaning/tidying results for Tableau ---")
+    step = "clean_logs"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             if configGen.OUTPUT_FILE.exists():
                 run_cleaner(
@@ -93,15 +106,30 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError(f"Tidy output file not found: {configGen.OUTPUT_FILE}")
         except Exception:
-            logger.exception("Cleaning step failed - stopping pipeline")
-            sys.exit(1)
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('clean_logs')}: Cleaning skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
-    # 3. Create .hyper from Summarised Logs
+    # 3. Create Utilisation Report
     # ---------------------------------------------------------------------
-    if workflow["create_hyper"]:
-        logger.info(f"--- {step_label('create_hyper')}: Building Tableau .hyper file ---")
+    step = "create_util"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
+        try:
+            if configGen.TIDY_OUTPUT_FILE.exists():
+                ...
+            else:
+                raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
+        except Exception:
+            step_error(step)
+    else:
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
+
+    # 4. Create .hyper files
+    # ---------------------------------------------------------------------
+    step = "create_hyper_files"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             if configGen.TIDY_OUTPUT_FILE.exists():
                 create_hyper_from_csv(
@@ -112,15 +140,15 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
         except Exception:
-            logger.exception("Hyper file creation failed - stopping pipeline")
-            sys.exit(1)
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('create_hyper')}: Hyper file creation skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
-    # 4. Publish .hyper to Tableau Server
+    # 5. Publish .hyper's to Tableau Server
     # ---------------------------------------------------------------------
-    if workflow["publish"]:
-        logger.info(f"--- {step_label('publish')}: Publishing to Tableau Server ---")
+    step = "publish_hypers"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             if configGen.TABLEAU_FILE.exists():
                 publish_hyper_to_tableau(
@@ -136,15 +164,15 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
         except Exception:
-            logger.exception("Publishing step failed - stopping pipeline")
-            sys.exit(1)
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('publish')}: Publishing skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
-    # 5. Check Instrument Activity
+    # 6. Check Instrument Activity
     # ---------------------------------------------------------------------
-    if workflow["check_stale"]:
-        logger.info(f"--- {step_label('check_stale')}: Checking instrument activity ---")
+    step = "check_stale"
+    if workflow[step]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             if configGen.TIDY_OUTPUT_FILE.exists():
                 check_stale_instruments(
@@ -156,25 +184,26 @@ def main(instrument: str) -> None:
                     logger)
             else:
                 raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
-        except Exception as e:
-            logger.error(f"check_stale_instruments failed: {e}")
+        except Exception:
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('check_stale')}: Check stale skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
-    # 6. Optional Slack notification
+    # 7. Optional Slack notification
     # ---------------------------------------------------------------------
-    if workflow["send_slack"]:
-        logger.info(f"--- {step_label('send_slack')}: Sending notification to Slack ---")
+    step = "send_slack"
+    if workflow["step"]:
+        logger.info(f"--- {step_label(step)}: Running step ---")
         try:
             slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)
             slack.send_message(
                 channel=slack_config.PRIVATE_CHANNEL_ID,
                 text=getattr(configGen, "SLACK_COMPLETION_MESSAGE", f"{instrument.title()} logs pipeline complete ✅"),
             )
-        except Exception as e:
-            logger.error(f"Send_Slack_Update failed: {e}")
+        except Exception:
+            step_error(step)
     else:
-        logger.info(f"--- {step_label('send_slack')}: Check stale skipped ---")
+        logger.info(f"--- {step_label(step)}: Step skipped ---")
 
 
 if __name__ == "__main__":

@@ -5,12 +5,13 @@ import re
 # =========================================================================
 
 STEPS_TO_RUN = {
-    "parse_logs":   True,   # Condense traces into a single .csv
-    "clean_logs":   True,   # Tidy raw csv into a Tableau-ready csv
-    "create_hyper": True,   # Convert tidy csv into a hyper file
-    "publish":      False,   # Push hyper file to Tableau server
-    "check_stale":  True,   # Create a warning if an instrument has gone quiet for too long
-    "send_slack":   True,   # Send an update to Slack informing users of run success
+    "parse_logs":           False,   # Condense traces into a single .csv
+    "clean_logs":           False,   # Tidy raw csv into a Tableau-ready csv
+    "create_util":          True,   # Create a utilisation report
+    "create_hyper_files":   True,   # Convert tidy csv into a hyper file
+    "publish_hypers":       True,   # Push hyper file to Tableau server
+    "check_stale":          True,   # Create a warning if an instrument has gone quiet for too long
+    "send_slack":           True,   # Send an update to Slack informing users of run success
 }
 
 # =========================================================================
