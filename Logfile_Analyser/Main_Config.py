@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 
 # ----- Pick the Folder -----
-LOG_FOLDER = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-LOG_FOLDER = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-LOG_FOLDER = Path(r"C:\Users\ch33\Documents")
+# PARENT_DIR = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+# PARENT_DIR = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+PARENT_DIR = Path(r"C:\Users\ch33\Documents")
 
 # ----- Pick the Instrument -----
 INSTRUMENT = "Bravo"
@@ -14,30 +14,35 @@ INSTRUMENT = "Bravo"
 # CONFIG - the settings you're most likely to want to change
 # =========================================================================
 
-LOG_FOLDER = LOG_FOLDER / INSTRUMENT
+INSTRUMENT_DIR = PARENT_DIR / INSTRUMENT
+PROCESSED_DIR = INSTRUMENT_DIR / "Processed"
 
-PROCESSED_FOLDER = LOG_FOLDER / "Processed"
-MOVE_FILES_AFTER_PARSE = True
+SUMMARY_RAW_CSV = INSTRUMENT_DIR / "CondensedLogs_Raw.csv" 
+SUMMARY_TIDY_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
+UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
 
-OUTPUT_FILE = LOG_FOLDER / "CondensedLogs_Raw.csv" 
-TIDY_OUTPUT_FILE = LOG_FOLDER / "TidyLogs_ForTableau.csv"
-TABLEAU_FILE = LOG_FOLDER / "TidyLogs.hyper"
+SUMMARY_TIDY_HYPER = INSTRUMENT_DIR / "TidyLogs.hyper"
+UTILISATION_HYPER = INSTRUMENT_DIR / "InstrumentUtilisation.hyper"
 
-TABLEAU_DATA_NAME = f"{INSTRUMENT} Tidy Logs"
+STALE_INSTRUMENT_CSV = INSTRUMENT_DIR / "stale_instruments.txt"
+
+TABLEAU_DB_LOG_NAME = f"{INSTRUMENT} Tidy Logs"
+TABLEAU_DB_UTIL_NAME = f"{INSTRUMENT} Utilisation"
+
 TABLEAU_SERVER_ADDRESS = "https://globalreporting.internal.sanger.ac.uk"
 TABLEAU_SITE_ID = ""
 TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
 
 DAYS_BEFORE_STALE = 45
-STALE_INSTRUMENTS = LOG_FOLDER / "stale_instruments.txt"
-
 DAYS_TO_ANALYSE = 30
+MOVE_FILES_AFTER_PARSE = True
 
 MAX_WORKERS = min(8, os.cpu_count() or 8)
 
-# TIDY_OUTPUT_FILE = Path(r"C:\Users\ch33\Documents\Bravo\HourScaffold.csv")
-# TABLEAU_FILE = LOG_FOLDER / "DataScaffold.hyper"
-# TABLEAU_DATA_NAME = f"{INSTRUMENT} DataScaffold"
+TABLEAU_DATASETS = [
+    (SUMMARY_TIDY_HYPER, TABLEAU_DB_LOG_NAME),
+    (UTILISATION_HYPER, TABLEAU_DB_UTIL_NAME),
+]
 
 # =========================================================================
 # CONFIG - the settings you're most likely to want to change
@@ -73,6 +78,11 @@ TIDY_FIELDS = [
     ("run_date", "Run Date", "date"),
     ("process_type", "Process Type", "text"),
     ("method_simplified", "Method Simp.", "text")
+]
+
+UTIL_STRUCTURE = [
+    ("","",""),
+    ("","","")
 ]
 
 PROCESS_TYPES = {

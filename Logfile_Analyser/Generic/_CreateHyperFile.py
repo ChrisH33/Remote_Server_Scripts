@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime
 from pathlib import Path
+
 from tableauhyperapi import (
     HyperProcess,
     Connection,
@@ -9,102 +10,193 @@ from tableauhyperapi import (
     TableDefinition,
     TableName,
     SqlType,
-    Inserter
+    Inserter,
 )
 
+
 def create_hyper_from_csv(
-    csv_path: str | Path,
-    hyper_path: str | Path,
+    csv_path: Path,
+    hyper_path: Path,
+    column_headers: list[tuple[str, str, str]],
     logger,
     schema_name: str = "Extract",
     table_name: str = "Extract",
-    sample_size: int = 100,
 ) -> None:
 
-    logger.info("Starting Hyper file creation from %s", Path(hyper_path).name)
+    logger.info("Starting Hyper file creation from %s",hyper_path.name)
 
-    datetime_formats = (
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d",
-        "%d/%m/%Y %H:%M:%S",
-        "%d/%m/%Y %H:%M",
-        "%d/%m/%Y",
+    # ------------------------------------------------------------------
+    # Type definitions
+    # ------------------------------------------------------------------
+
+    type_definitions = {
+        "text": (SqlType.text(), lambda value: value),
+        "float": (SqlType.double(), lambda value: float(value)),
+        "datetime": (SqlType.timestamp(), lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M:%S")),
+        "date": (SqlType.date(), lambda value: datetime.strptime(value, "%Y-%m-%d").date()),
+    }
+
+    # ------------------------------------------------------------------
+    # Build schema from TIDY_FIELDS
+    # ------------------------------------------------------------------
+
+    columns = []
+
+    for _, column_name, field_type in column_headers:
+
+        if field_type not in type_definitions:
+            raise ValueError(f"Unknown field type '{field_type} for column '{column_name}'")
+
+        sql_type, _ = type_definitions[field_type]
+        columns.append(TableDefinition.Column(column_name, sql_type))
+
+    table = TableDefinition(
+        table_name=TableName(schema_name, table_name),
+        columns=columns,
     )
 
-    def detect_type_and_parser(values):
-        values = [v.strip() for v in values if v.strip()]
-        if not values:
-            return SqlType.text(), lambda v: v
+    # ------------------------------------------------------------------
+    # Validate CSV headers
+    # ------------------------------------------------------------------
 
-        try:
-            for v in values:
-                int(v)
-            return SqlType.big_int(), lambda v: int(v)
-        except ValueError:
-            pass
-
-        try:
-            for v in values:
-                float(v)
-            return SqlType.double(), lambda v: float(v)
-        except ValueError:
-            pass
-
-        for fmt in datetime_formats:
-            try:
-                for v in values:
-                    datetime.strptime(v, fmt)
-                return SqlType.timestamp(), (lambda fmt: lambda v: datetime.strptime(v, fmt))(fmt)
-            except ValueError:
-                continue
-
-        return SqlType.text(), lambda v: v
+    expected_headers = [column_name for _, column_name, _ in column_headers]
 
     try:
-        with open(csv_path, newline="", encoding="utf-8") as f:
-            reader = csv.reader(f)
+        with csv_path.open(newline="", encoding="utf-8-sig") as csv_file:
+            reader = csv.reader(csv_file)
             headers = next(reader)
-            rows = list(reader)
+
+            if headers != expected_headers:
+                raise ValueError(
+                    "CSV headers do not match TIDY_FIELDS.\n"
+                    f"Expected: {expected_headers}\n"
+                    f"Found:    {headers}"
+                )
+
     except Exception:
-        logger.exception("Failed to read CSV file %s", csv_path)
+        logger.exception("CSV header validation failed for %s", csv_path)
         raise
 
-    logger.info("Read %d headers and %d data rows from %s", len(headers), len(rows), Path(csv_path).name)
+    logger.info("CSV headers validated successfully")
 
-    samples = [[] for _ in headers]
-    for i, row in enumerate(rows):
-        for j, value in enumerate(row):
-            samples[j].append(value)
-        if i >= sample_size:
-            break
+    # ------------------------------------------------------------------
+    # Validate CSV data
+    # ------------------------------------------------------------------
 
-    logger.debug("Collected sample rows for type inference across %d columns", len(headers))
+    logger.info("Validating CSV against predefined field types")
 
-    col_info = [detect_type_and_parser(values) for values in samples]
-    columns = [
-        TableDefinition.Column(col, sqltype)
-        for col, (sqltype, _) in zip(headers, col_info)
-    ]
-    table = TableDefinition(table_name=TableName(schema_name, table_name), columns=columns)
+    row_count = 0
+    try:
+        with csv_path.open(newline="", encoding="utf-8-sig") as csv_file:
+            reader = csv.reader(csv_file)
 
-    logger.debug("Inferred column types for %s: %s", table_name, ", ".join(f"{col}={sqltype}" for col, (sqltype, _) in zip(headers, col_info)))
+            # Skip header
+            next(reader)
+            for row_number, row in enumerate(reader, start=2):
+
+                # Ignore completely empty rows
+                if not row or all(not value.strip() for value in row):
+                    continue
+                if len(row) != len(column_headers):
+                    raise ValueError(
+                        f"Malformed row {row_number}: "
+                        f"expected {len(column_headers)} columns, "
+                        f"got {len(row)}"
+                    )
+
+                for value, (_, column_name, field_type) in zip(row, column_headers):
+                    value = value.strip()
+
+                    # Empty CSV values become NULL
+                    if value == "":
+                        continue
+
+                    _, parser = type_definitions[field_type]
+                    try:
+                        parser(value)
+
+                    except (ValueError, TypeError, OverflowError) as exc:
+
+                        raise ValueError(
+                            f"Invalid value on row {row_number}, "
+                            f"column '{column_name}': "
+                            f"{value!r} is not a valid {field_type}"
+                        ) from exc
+
+                row_count += 1
+
+    except Exception:
+        logger.exception("CSV validation failed for %s", csv_path)
+        raise
+
+    logger.info("CSV validation successful: %d rows validated", row_count)
+
+    # ------------------------------------------------------------------
+    # Create Hyper
+    # ------------------------------------------------------------------
 
     try:
-        with HyperProcess(Telemetry.SEND_USAGE_DATA_TO_TABLEAU, parameters={"default_database_version": "2"}) as hyper:
-            with Connection(endpoint=hyper.endpoint, database=hyper_path, create_mode=CreateMode.CREATE_AND_REPLACE) as connection:
+        with HyperProcess(
+            Telemetry.SEND_USAGE_DATA_TO_TABLEAU,
+            parameters={"default_database_version": "2"},
+        ) as hyper:
+
+            with Connection(
+                endpoint=hyper.endpoint,
+                database=str(hyper_path),
+                create_mode=CreateMode.CREATE_AND_REPLACE,
+            ) as connection:
                 connection.catalog.create_schema(schema_name)
                 connection.catalog.create_table(table)
 
                 with Inserter(connection, table) as inserter:
-                    for row in rows:
-                        parsed_row = []
-                        for value, (_, parser) in zip(row, col_info):
-                            value = value.strip()
-                            parsed_row.append(None if value == "" else parser(value))
-                        inserter.add_row(parsed_row)
+                    with csv_path.open(newline="", encoding="utf-8-sig") as csv_file:
+                        reader = csv.reader(csv_file)
+
+                        # Skip header
+                        next(reader)
+
+                        for row_number, row in enumerate(reader, start=2):
+                            if not row or all(not value.strip() for value in row):
+                                continue
+
+                            parsed_row = []
+                            for value, (
+                                _,
+                                column_name,
+                                field_type,
+                            ) in zip(row, column_headers):
+
+                                value = value.strip()
+
+                                if value == "":
+                                    parsed_row.append(None)
+                                    continue
+
+                                _, parser = type_definitions[field_type]
+
+                                try:
+                                    parsed_row.append(parser(value))
+
+                                except (
+                                    ValueError,
+                                    TypeError,
+                                    OverflowError,
+                                ) as exc:
+
+                                    raise ValueError(
+                                        f"Invalid value on row "
+                                        f"{row_number}, column "
+                                        f"'{column_name}': "
+                                        f"{value!r}"
+                                    ) from exc
+
+                            inserter.add_row(parsed_row)
+
                     inserter.execute()
+
     except Exception:
         logger.exception("Failed to create Hyper file %s", hyper_path)
         raise
 
-    logger.info("Hyper file created successfully")
+    logger.info("Hyper file created successfully: %s (%d rows)", hyper_path.name, row_count)

@@ -6,15 +6,13 @@ from creds import Tableau_Credentials as credentials
 import Logfile_Analyser.Main_Config as configGen
 from Logfile_Analyser.Generic._CleanRawLogfiles import run_cleaner
 from Logfile_Analyser.Generic._CreateHyperFile import create_hyper_from_csv
-from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hyper_to_tableau
+from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hypers_to_tableau
 from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
 
 """
-- update create hyper to work with multiple csvs
-- update send hyper to work with multiple hypers
 - update utilisation to function
 - update tableau with the new data
 """
@@ -55,7 +53,7 @@ def main(instrument: str) -> None:
     STEP_ORDER = list(workflow.keys())
 
     # Check the Instrument Config is loaded correctly
-    if instrument.lower() not in configGen.LOG_FOLDER.name.lower():
+    if instrument.lower() not in configGen.INSTRUMENT_DIR.name.lower():
         logger.info(f"!! Wrong instrument selected in Main_Config.py")
         return
 
@@ -66,17 +64,20 @@ def main(instrument: str) -> None:
         logger.exception(f"!! {step_label(step)} failed - stopping workflow")
         sys.exit(1)
 
-    # 1. Parse Raw Logfiles (instrument-specific parser)
+    # 1. Condense traces into a single .csv
     # ---------------------------------------------------------------------
     step = "parse_logs"
     if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
             run_parser(
-                log_folder=configGen.LOG_FOLDER,
-                processed_folder=configGen.PROCESSED_FOLDER,
-                ignored_folders={configGen.PROCESSED_FOLDER},
-                output_file=configGen.OUTPUT_FILE,
+                log_folder=configGen.INSTRUMENT_DIR,
+                processed_folder=configGen.PROCESSED_DIR,
+                ignored_folders={configGen.PROCESSED_DIR},
+                output_file=configGen.SUMMARY_RAW_CSV,
                 fields=configGen.FIELDS,
                 move_files_after_parse=configGen.MOVE_FILES_AFTER_PARSE,
                 max_workers=configGen.MAX_WORKERS,
@@ -85,18 +86,24 @@ def main(instrument: str) -> None:
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
-    # 2. Tidy Raw Logfiles
+    # 2. Tidy raw csv into a Tableau-ready csv
     # ---------------------------------------------------------------------
     step = "clean_logs"
     if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
-            if configGen.OUTPUT_FILE.exists():
+            if configGen.SUMMARY_RAW_CSV.exists():
                 run_cleaner(
-                    raw_input_file=configGen.OUTPUT_FILE,
-                    tidy_output_file=configGen.TIDY_OUTPUT_FILE,
+                    raw_input_file=configGen.SUMMARY_RAW_CSV,
+                    tidy_output_file=configGen.SUMMARY_TIDY_CSV,
                     tidy_fields=configGen.TIDY_FIELDS,
                     statuses_to_drop=configDev.STATUSES_TO_DROP,
                     filename_prefixes_to_drop=configDev.FILENAME_PREFIXES_TO_DROP,
@@ -104,96 +111,152 @@ def main(instrument: str) -> None:
                     logger=logger,
                 )
             else:
-                raise FileNotFoundError(f"Tidy output file not found: {configGen.OUTPUT_FILE}")
+                raise FileNotFoundError("Raw logfile.csv cannot be found")
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
-    # 3. Create Utilisation Report
+    # 3. Convert tidy csv into a hyper file
     # ---------------------------------------------------------------------
-    step = "create_util"
+    step = "create_log_hyper"
     if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
-            if configGen.TIDY_OUTPUT_FILE.exists():
-                ...
-            else:
-                raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
-        except Exception:
-            step_error(step)
-    else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
-
-    # 4. Create .hyper files
-    # ---------------------------------------------------------------------
-    step = "create_hyper_files"
-    if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
-        try:
-            if configGen.TIDY_OUTPUT_FILE.exists():
+            if configGen.SUMMARY_TIDY_CSV.exists():
                 create_hyper_from_csv(
-                    csv_path=configGen.TIDY_OUTPUT_FILE,
-                    hyper_path=configGen.TABLEAU_FILE,
+                    csv_path=configGen.SUMMARY_TIDY_CSV,
+                    hyper_path=configGen.SUMMARY_TIDY_HYPER,
+                    column_headers=configGen.UTIL_STRUCTURE,
                     logger=logger,
                 )
             else:
-                raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
+                raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
+
+    # 4. Create Utilisation Report
+    # ---------------------------------------------------------------------
+    step = "create_util"
+    if workflow[step]:
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
+        try:
+            if configGen.SUMMARY_TIDY_CSV.exists():
+                ...
+            else:
+                raise FileNotFoundError("Tidy log.csv file not found")
+        except Exception:
+            step_error(step)
+    else:
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
+
+    # 5. Convert utilisation csv into a hyper file
+    # ---------------------------------------------------------------------
+    step = "create_util_hyper"
+    if workflow[step]:
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
+        try:
+            if configGen.UTILISATION_CSV.exists():
+                create_hyper_from_csv(
+                    csv_path=configGen.UTILISATION_CSV,
+                    hyper_path=configGen.UTILISATION_HYPER,
+                    column_headers=configGen.TIDY_FIELDS,
+                    logger=logger,
+                )
+            else:
+                raise FileNotFoundError("Utilisation.csv file not found")
+        except Exception:
+            step_error(step)
+    else:
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
     # 5. Publish .hyper's to Tableau Server
     # ---------------------------------------------------------------------
     step = "publish_hypers"
     if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
-            if configGen.TABLEAU_FILE.exists():
-                publish_hyper_to_tableau(
-                    configGen.TABLEAU_FILE,
-                    configGen.TABLEAU_PROJECT_ID,
-                    configGen.TABLEAU_DATA_NAME,
-                    logger,
+            if configGen.SUMMARY_TIDY_HYPER.exists() or configGen.UTILISATION_HYPER.exists():
+                publish_hypers_to_tableau(
+                    datasets=configGen.TABLEAU_DATASETS,
+                    project_id=configGen.TABLEAU_PROJECT_ID,
+                    logger=logger,
                     server_url=configGen.TABLEAU_SERVER_ADDRESS,
                     site_id=configGen.TABLEAU_SITE_ID,
                     token_name=credentials.TOKEN_NAME,
                     token_secret=credentials.TOKEN_SECRET,
                 )
             else:
-                raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
+                raise FileNotFoundError(f"hyper input file not found")
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
     # 6. Check Instrument Activity
     # ---------------------------------------------------------------------
     step = "check_stale"
     if workflow[step]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
-            if configGen.TIDY_OUTPUT_FILE.exists():
+            if configGen.SUMMARY_TIDY_CSV.exists():
                 check_stale_instruments(
-                    configGen.TIDY_OUTPUT_FILE,
+                    configGen.SUMMARY_TIDY_CSV,
                     configGen.DAYS_BEFORE_STALE,
-                    configGen.LOG_FOLDER,
-                    configGen.PROCESSED_FOLDER,
-                    configGen.STALE_INSTRUMENTS,
+                    configGen.INSTRUMENT_DIR,
+                    configGen.PROCESSED_DIR,
+                    configGen.STALE_INSTRUMENT_CSV,
                     logger)
             else:
-                raise FileNotFoundError(f"Tidy output file not found: {configGen.TIDY_OUTPUT_FILE}")
+                raise FileNotFoundError("Tidy log.cvs file not found")
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
     # 7. Optional Slack notification
     # ---------------------------------------------------------------------
     step = "send_slack"
-    if workflow["step"]:
-        logger.info(f"--- {step_label(step)}: Running step ---")
+    if workflow[step]:
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Running step ---",
+            )
         try:
             slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)
             slack.send_message(
@@ -203,7 +266,10 @@ def main(instrument: str) -> None:
         except Exception:
             step_error(step)
     else:
-        logger.info(f"--- {step_label(step)}: Step skipped ---")
+        logger.info(
+            f"--- {step_label(step)}",
+            ": Step skipped ---",
+            )
 
 
 if __name__ == "__main__":
