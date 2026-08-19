@@ -1,11 +1,24 @@
-import pandas as pd
+import logging
+import sys
 from pathlib import Path
 
-# ============================================================
-# Functions
-# ============================================================
+import pandas as pd
 
-def calculate_hourly_utilisation(df: pd.DataFrame, days: int) -> pd.DataFrame:
+# =========================================================================
+# CORE CALCULATION
+# =========================================================================
+
+def calculate_hourly_utilisation(
+    df: pd.DataFrame,
+    days: int,
+    *,
+    include_idle_instruments: bool = False,
+) -> pd.DataFrame:
+    """
+    Given a tidy logs DataFrame with 'Instrument', 'Start Time', 'End Time'
+    columns, return one row per (instrument, hour) over the trailing
+    `days` days, with minutes run and utilisation as a fraction of 60.
+    """
 
     # Convert timestamps
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce")
@@ -32,17 +45,27 @@ def calculate_hourly_utilisation(df: pd.DataFrame, days: int) -> pd.DataFrame:
     analysis_start = start_date
     analysis_end = end_date + pd.Timedelta(days=1)
 
+    # Keep the full instrument list before filtering to the window, in
+    # case the caller wants idle instruments included as 0% rows.
+    all_instruments = sorted(df["Instrument"].dropna().unique())
+
     # Restrict runs to anything overlapping the analysis period
     df = df[
         (df["End Time"] > analysis_start) &
         (df["Start Time"] < analysis_end)
-    ].copy()  # type: ignore[reportAssignmentType]
+    ].copy()
 
     # --------------------------------------------------------
-    # Get instruments
+    # Get instruments to include in the scaffold
     # --------------------------------------------------------
 
-    instruments = sorted(df["Instrument"].dropna().unique())
+    if include_idle_instruments:
+        instruments = all_instruments
+    else:
+        instruments = sorted(df["Instrument"].dropna().unique())
+
+    if not instruments:
+        return pd.DataFrame()
 
     # --------------------------------------------------------
     # Create complete hourly scaffold
@@ -149,3 +172,62 @@ def calculate_hourly_utilisation(df: pd.DataFrame, days: int) -> pd.DataFrame:
             "Utilisation",
         ]
     ]
+
+# =========================================================================
+# PIPELINE ENTRY POINT (matches the style of _CleanRawLogfiles.run_cleaner,
+# _CheckHistoricLogs.check_stale_instruments, etc.)
+# =========================================================================
+
+def run_hourly_utilisation(
+    *,
+    tidy_input_file: Path,
+    output_file: Path,
+    days: int,
+    logger: logging.Logger,
+    include_idle_instruments: bool = False,
+) -> None:
+
+    try:
+        df = pd.read_csv(tidy_input_file)
+    except Exception:
+        logger.exception(f"Failed to read {tidy_input_file}")
+        return
+
+    required_cols = {"Instrument", "Start Time", "End Time"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        logger.error(
+            f"Tidy CSV is missing required column(s): {sorted(missing)}. "
+            f"Found columns: {list(df.columns)}"
+        )
+        return
+
+    try:
+        result = calculate_hourly_utilisation(
+            df,
+            days,
+            include_idle_instruments=include_idle_instruments,
+        )
+    except Exception:
+        logger.exception("Failed to calculate hourly utilisation")
+        return
+
+    if result.empty:
+        logger.warning(
+            f"No utilisation data produced - no valid runs found in the "
+            f"trailing {days} day(s)."
+        )
+        return
+
+    try:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        result.to_csv(output_file, index=False)
+    except OSError:
+        logger.exception(f"Failed to write {output_file}")
+        return
+
+    logger.info(
+        f"Wrote hourly utilisation for {result['Instrument'].nunique()} "
+        f"instrument(s) across {days} day(s) "
+        f"({len(result)} rows) to {output_file}"
+    )

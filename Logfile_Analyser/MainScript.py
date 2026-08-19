@@ -8,6 +8,7 @@ from Logfile_Analyser.Generic._CleanRawLogfiles import run_cleaner
 from Logfile_Analyser.Generic._CreateHyperFile import create_hyper_from_csv
 from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hypers_to_tableau
 from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments
+from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
@@ -140,7 +141,12 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
-                ...
+                run_hourly_utilisation(
+                    tidy_input_file=configGen.SUMMARY_TIDY_CSV,
+                    output_file=configGen.UTILISATION_CSV,
+                    days=40,
+                    logger=logger,
+                )
             else:
                 raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
