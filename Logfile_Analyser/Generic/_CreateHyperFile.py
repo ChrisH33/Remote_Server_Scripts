@@ -1,7 +1,6 @@
 import csv
 from datetime import datetime
 from pathlib import Path
-
 from tableauhyperapi import (
     HyperProcess,
     Connection,
@@ -37,19 +36,15 @@ def create_hyper_from_csv(
     }
 
     # ------------------------------------------------------------------
-    # Build schema from TIDY_FIELDS
+    # Build schema
     # ------------------------------------------------------------------
 
     columns = []
-
     for _, column_name, field_type in column_headers:
-
         if field_type not in type_definitions:
             raise ValueError(f"Unknown field type '{field_type} for column '{column_name}'")
-
         sql_type, _ = type_definitions[field_type]
         columns.append(TableDefinition.Column(column_name, sql_type))
-
     table = TableDefinition(
         table_name=TableName(schema_name, table_name),
         columns=columns,
@@ -199,4 +194,4 @@ def create_hyper_from_csv(
         logger.exception("Failed to create Hyper file %s", hyper_path)
         raise
 
-    logger.info("Hyper file created successfully: %s (%d rows)", hyper_path.name, row_count)
+    logger.info(f"Finished. {hyper_path.name} created with {row_count} rows")

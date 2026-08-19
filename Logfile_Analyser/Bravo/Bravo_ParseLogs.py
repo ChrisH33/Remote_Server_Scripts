@@ -186,9 +186,6 @@ def run_parser(
     max_workers,
     logger,
 ) -> None:
-
-    logger.info("=== Log parser starting ===")
-
     # ---------------------------------------------------------
     # 1. Find all files
     # ---------------------------------------------------------
@@ -237,7 +234,7 @@ def run_parser(
                         logger.info(f"Processed {count}/{total_files} files") 
             except Exception:
                 logger.exception(f"Error processing {logfile.name}")
-    logger.info(f"Finished parsing {len(results)}/{total_files} files")
+    logger.info(f"Parsed {len(results)}/{total_files} files")
 
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
@@ -268,14 +265,11 @@ def run_parser(
     if new_rows:
         write_results(new_rows, output_file, fields)
         logger.info(f"Saved {len(new_rows)} new results to {output_file}")
-    else:
-        logger.info("No new results to save")
 
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed
     # ---------------------------------------------------------
 
-    logger.info("Moving parsed files to Processed...")
     if move_files_after_parse:
         for logfile, _ in results:
             instrument_folder = logfile.parent.name

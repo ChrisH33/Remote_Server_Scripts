@@ -15,6 +15,7 @@ from SlackClientWrapper import _config as slack_config
 """
 - update utilisation to function
 - update tableau with the new data
+- Why isn't the Bravo working correctly?
 """
 
 # =========================================================================
@@ -57,21 +58,22 @@ def main(instrument: str) -> None:
         logger.info(f"!! Wrong instrument selected in Main_Config.py")
         return
 
-    def step_label(key: str) -> str:
-        return f"Step {STEP_ORDER.index(key) + 1}/{len(STEP_ORDER)}"
-
-    def step_error(step):
-        logger.exception(f"!! {step_label(step)} failed - stopping workflow")
-        sys.exit(1)
+    def step_trace(str, step):
+        step = f"Step {STEP_ORDER.index(step) + 1}/{len(STEP_ORDER)}"
+        str = str.lower()
+        if str == "start":
+            logger.info(f"========== {step}: Running step ==========")
+        elif str == "error":
+            logger.exception(f"!! {step} failed - stopping workflow")
+            sys.exit(1)
+        elif str == "end":
+            logger.info(f"---------- {step}: Skipping step ----------")
 
     # 1. Condense traces into a single .csv
     # ---------------------------------------------------------------------
     step = "parse_logs"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             run_parser(
                 log_folder=configGen.INSTRUMENT_DIR,
@@ -84,21 +86,15 @@ def main(instrument: str) -> None:
                 logger=logger
             )
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 2. Tidy raw csv into a Tableau-ready csv
     # ---------------------------------------------------------------------
     step = "clean_logs"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.SUMMARY_RAW_CSV.exists():
                 run_cleaner(
@@ -113,94 +109,70 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError("Raw logfile.csv cannot be found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 3. Convert tidy csv into a hyper file
     # ---------------------------------------------------------------------
     step = "create_log_hyper"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
                 create_hyper_from_csv(
                     csv_path=configGen.SUMMARY_TIDY_CSV,
                     hyper_path=configGen.SUMMARY_TIDY_HYPER,
-                    column_headers=configGen.UTIL_STRUCTURE,
+                    column_headers=configGen.TIDY_FIELDS,
                     logger=logger,
                 )
             else:
                 raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)  
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 4. Create Utilisation Report
     # ---------------------------------------------------------------------
     step = "create_util"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
                 ...
             else:
                 raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 5. Convert utilisation csv into a hyper file
     # ---------------------------------------------------------------------
     step = "create_util_hyper"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.UTILISATION_CSV.exists():
                 create_hyper_from_csv(
                     csv_path=configGen.UTILISATION_CSV,
                     hyper_path=configGen.UTILISATION_HYPER,
-                    column_headers=configGen.TIDY_FIELDS,
+                    column_headers=configGen.UTIL_STRUCTURE,
                     logger=logger,
                 )
             else:
                 raise FileNotFoundError("Utilisation.csv file not found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 5. Publish .hyper's to Tableau Server
     # ---------------------------------------------------------------------
     step = "publish_hypers"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.SUMMARY_TIDY_HYPER.exists() or configGen.UTILISATION_HYPER.exists():
                 publish_hypers_to_tableau(
@@ -215,21 +187,15 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError(f"hyper input file not found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 6. Check Instrument Activity
     # ---------------------------------------------------------------------
     step = "check_stale"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
                 check_stale_instruments(
@@ -242,21 +208,15 @@ def main(instrument: str) -> None:
             else:
                 raise FileNotFoundError("Tidy log.cvs file not found")
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
     # 7. Optional Slack notification
     # ---------------------------------------------------------------------
     step = "send_slack"
     if workflow[step]:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Running step ---",
-            )
+        step_trace("start", step)
         try:
             slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)
             slack.send_message(
@@ -264,12 +224,9 @@ def main(instrument: str) -> None:
                 text=getattr(configGen, "SLACK_COMPLETION_MESSAGE", f"{instrument.title()} logs pipeline complete ✅"),
             )
         except Exception:
-            step_error(step)
+            step_trace("error", step)
     else:
-        logger.info(
-            f"--- {step_label(step)}",
-            ": Step skipped ---",
-            )
+        step_trace("end", step)
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ def _find_stale(log_folder: Path, processed_folder: Path, last_seen: dict, cutof
             logger.warning(f"No recorded activity at all for instrument: {instrument}")
             stale.append((instrument, None))
         elif last_seen_date < cutoff:
-            logger.warning(f"{instrument} last active {(now - last_seen_date).days} day(s) ago ({last_seen_date})")
+            logger.warning(f"{instrument} last active {(now - last_seen_date).days} days ago ({last_seen_date})")
             stale.append((instrument, last_seen_date))
     return stale
 
