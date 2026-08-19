@@ -1,5 +1,4 @@
-import logging
-import sys
+from typing import cast
 from pathlib import Path
 
 import pandas as pd
@@ -50,10 +49,10 @@ def calculate_hourly_utilisation(
     all_instruments = sorted(df["Instrument"].dropna().unique())
 
     # Restrict runs to anything overlapping the analysis period
-    df = df[
+    df = cast(pd.DataFrame, df[
         (df["End Time"] > analysis_start) &
         (df["Start Time"] < analysis_end)
-    ].copy()
+    ].copy())
 
     # --------------------------------------------------------
     # Get instruments to include in the scaffold
@@ -183,7 +182,7 @@ def run_hourly_utilisation(
     tidy_input_file: Path,
     output_file: Path,
     days: int,
-    logger: logging.Logger,
+    logger,
     include_idle_instruments: bool = False,
 ) -> None:
 

@@ -67,22 +67,27 @@ FIELDS = [
 ]
 
 TIDY_FIELDS = [
-    ("instrument", "Instrument", "text"),
-    ("filename", "Filename", "text"),
-    ("start_time", "Start Time", "datetime"),
-    ("end_time", "End Time", "datetime"),
-    ("status", "Status", "text"),
-    ("sim_mode", "Sim Mode", "text"),
-    ("method", "Method", "text"),
-    ("run_duration_minutes", "Run Duration (min)", "float"),
-    ("run_date", "Run Date", "date"),
-    ("process_type", "Process Type", "text"),
-    ("method_simplified", "Method Simp.", "text")
+    ("instrument",              "Instrument",           "text"),
+    ("filename",                "Filename",             "text"),
+    ("start_time",              "Start Time",           "datetime"),
+    ("end_time",                "End Time",             "datetime"),
+    ("status",                  "Status",               "text"),
+    ("sim_mode",                "Sim Mode",             "text"),
+    ("method",                  "Method",               "text"),
+    ("run_duration_minutes",    "Run Duration (min)",   "float"),
+    ("run_date",                "Run Date",             "date"),
+    ("process_type",            "Process Type",         "text"),
+    ("method_simplified",       "Method Simp.",         "text")
 ]
 
-UTIL_STRUCTURE = [
-    ("","",""),
-    ("","","")
+UTIL_FIELDS = [
+    ("instrument",              "Instrument",           "text"),
+    ("date",                    "Date",                 "date"),
+    ("hour",                    "Hour",                 "int"),
+    ("hour_start",              "Hour Start",           "datetime"),
+    ("run_minutes",             "Run Minutes",          "float"),
+    ("available_minutes",       "Available Minutes",    "int"),
+    ("utilisation",             "Utilisation",          "float"),
 ]
 
 PROCESS_TYPES = {

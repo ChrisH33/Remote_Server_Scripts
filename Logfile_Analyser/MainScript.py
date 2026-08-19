@@ -14,7 +14,7 @@ from SlackClientWrapper import _config as slack_config
 
 
 """
-- update utilisation to function
+- Check utilisation works
 - update tableau with the new data
 - Why isn't the Bravo working correctly?
 """
@@ -164,7 +164,7 @@ def main(instrument: str) -> None:
                 create_hyper_from_csv(
                     csv_path=configGen.UTILISATION_CSV,
                     hyper_path=configGen.UTILISATION_HYPER,
-                    column_headers=configGen.UTIL_STRUCTURE,
+                    column_headers=configGen.UTIL_FIELDS,
                     logger=logger,
                 )
             else:

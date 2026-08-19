@@ -9,7 +9,7 @@ STEPS_TO_RUN = {
     "clean_logs":           False,   # Tidy raw csv into a Tableau-ready csv
     "create_log_hyper":     False,   # Convert tidy csv into a hyper file
     "create_util":          True,   # Create a utilisation report
-    "create_util_hyper":    False,   # Convert tidy csv into a hyper file
+    "create_util_hyper":    True,   # Convert tidy csv into a hyper file
     "publish_hypers":       False,   # Push hyper file to Tableau server
     "check_stale":          False,   # Create a warning if an instrument has gone quiet for too long
     "send_slack":           False,   # Send an update to Slack informing users of run success

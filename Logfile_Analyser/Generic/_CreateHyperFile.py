@@ -30,6 +30,7 @@ def create_hyper_from_csv(
 
     type_definitions = {
         "text": (SqlType.text(), lambda value: value),
+        "int": (SqlType.big_int(), lambda value: int(value)),
         "float": (SqlType.double(), lambda value: float(value)),
         "datetime": (SqlType.timestamp(), lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M:%S")),
         "date": (SqlType.date(), lambda value: datetime.strptime(value, "%Y-%m-%d").date()),
