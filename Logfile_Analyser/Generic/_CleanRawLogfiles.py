@@ -171,8 +171,6 @@ def run_cleaner(
     logger: logging.Logger,
 ) -> None:
 
-    logger.info("=== Tidy-up script starting ===")
-
     # Check raw input exists
     if not raw_input_file.exists():
         logger.error(f"Raw input file not found: {raw_input_file}")
@@ -195,7 +193,7 @@ def run_cleaner(
     # Find new IDs
     new_ids = potential_ids - existing_ids
     if not new_ids:
-        logger.info("No new rows to process.")
+        logger.info("Finished. No new rows to process.")
         return
     logger.info(f"Found {len(new_ids)} new IDs")
 
