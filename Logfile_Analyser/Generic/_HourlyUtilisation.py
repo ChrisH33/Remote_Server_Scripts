@@ -170,17 +170,19 @@ def run_hourly_utilisation(
         logger.exception("Failed to calculate hourly utilisation")
         return
 
-    # No utilisation data found for the preceding days
-    if result.empty:
-        logger.warning(
-            f"No utilisation data produced - no valid runs found in the "
-            f"trailing {days} day(s)."
-        )
-        return
-
     # Optionally exclude weekend rows before writing out
     if exclude_weekends:
         result = result[pd.to_datetime(result["Date"]).dt.weekday < 5]  # Mon=0 ... Sun=6
+
+    # Drop hours with no recorded run time - only rows with actual usage are written
+    # result = result[result["Run Minutes"] > 0]
+
+    if result.empty:
+        logger.warning(
+            f"No utilisation data produced - all rows had zero run minutes "
+            f"in the trailing {days} day(s)."
+        )
+        return
 
     # Create output file
     try:

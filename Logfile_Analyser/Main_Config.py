@@ -7,8 +7,8 @@ from pathlib import Path
 PARENT_DIR = Path(r"C:\Users\ch33\Documents")
 
 # ----- Pick the Instrument -----
-INSTRUMENT = "Bravo"
-# INSTRUMENT = "Hamilton"
+#INSTRUMENT = "Bravo"
+INSTRUMENT = "Hamilton"
 
 # =========================================================================
 # CONFIG - the settings you're most likely to want to change
@@ -35,8 +35,7 @@ TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
 
 DAYS_BEFORE_STALE = 45
 DAYS_TO_ANALYSE = 30
-MOVE_FILES_AFTER_PARSE = True
-EXCLUDE_WEEKENDS = True
+MOVE_FILES_AFTER_PARSE = False
 EXCLUDE_WEEKENDS = True  # flip to False to include Sat/Sun in utilisation output
 
 MAX_WORKERS = min(8, os.cpu_count() or 8)
