@@ -35,7 +35,7 @@ def publish_hypers_to_tableau(
             for hyper_file, datasource_name in datasets:
                 hyper_file = Path(hyper_file)   # Ensure it's always a Path object
                 logger.info(
-                    "Publishing %s as datasource '%s'",
+                    "Preparing to publish %s as datasource '%s'",
                     hyper_file.name,
                     datasource_name,
                 )
@@ -43,7 +43,7 @@ def publish_hypers_to_tableau(
                 # Describe the target datasource: which project it belongs to and what it should be named.
                 datasource = TSC.DatasourceItem(project_id=project_id, name=datasource_name)
 
-                if False:   # Upload & publish the .hyper file itself
+                if True:   # Upload & publish the .hyper file itself
                     published_ds = server.datasources.publish(datasource, str(hyper_file), publish_mode)
                     logger.info("Published '%s' successfully: %s", datasource_name, published_ds.id)
 

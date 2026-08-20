@@ -142,8 +142,9 @@ def main(instrument: str) -> None:
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
                 run_hourly_utilisation(
-                    tidy_input_file=configGen.SUMMARY_TIDY_CSV,
+                    summary_file=configGen.SUMMARY_TIDY_CSV,
                     output_file=configGen.UTILISATION_CSV,
+                    exclude_weekends=configGen.EXCLUDE_WEEKENDS,
                     days=40,
                     logger=logger,
                 )
