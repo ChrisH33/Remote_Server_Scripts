@@ -12,54 +12,33 @@ import re
 # HELPERS
 # ============================================================================
 
-def parse_timestamp(value: str):
-    for fmt in config.TIMESTAMP_FORMATS:
-        try:
-            return datetime.strptime(value.strip(), fmt)
-        except ValueError:
-            pass
-
-    return None
-
-def extract_timestamp(line):
+def extract_timestamp(line, logger):
     """
-    First tab-separated field is the timestamp.
+    Extract and parse the timestamp from the first tab-separated field.
     """
-
     parts = line.split("\t")
-
     if not parts:
         return None
 
-    return parse_timestamp(parts[0])
+    value = parts[0].strip()
+    for fmt in config.TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+    logger.info(f"Trouble with this string: {value}")
+    return None
 
 def extract_method(line):
-    """
-    Extract .pro filename from a Bravo line.
-    """
-
-    match = re.search(
-        r"([^\\]+\.pro)",
-        line,
-        re.IGNORECASE,
-    )
-
+    match = re.search(r"([^\\]+\.pro)",line,re.IGNORECASE)
     if match:
         return match.group(1)
-
     return None
 
 def extract_runset(line):
-
-    match = re.search(
-        r"starting runset\s*:\s*(.+)",
-        line,
-        re.IGNORECASE,
-    )
-
+    match = re.search(r"starting runset\s*:\s*(.+)",line,re.IGNORECASE)
     if match:
         return match.group(1).strip()
-
     return None
 
 # ============================================================================
@@ -100,7 +79,7 @@ def parse_bravo_file(logfile: Path, logger):
 
                     current_run = BravoRun()
                     current_run.instrument = logfile.parent.name
-                    current_run.start_time = extract_timestamp(line)
+                    current_run.start_time = extract_timestamp(line, logger)
 
                     method = extract_method(line)
                     if method:
@@ -135,7 +114,7 @@ def parse_bravo_file(logfile: Path, logger):
                 is_abort = any(config.PATTERNS[key] in line_lower for key in config.ABORT_PATTERNS)
 
                 if (is_end or is_abort) and current_run.end_time is None:
-                    current_run.end_time = extract_timestamp(line)
+                    current_run.end_time = extract_timestamp(line, logger)
                     current_run.status = "Complete" if is_end else "Aborted"
 
     except OSError:
