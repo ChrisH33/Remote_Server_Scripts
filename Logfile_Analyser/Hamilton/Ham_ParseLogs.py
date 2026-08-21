@@ -153,6 +153,7 @@ def run_parser(
     ignored_folders: set[Path],
     output_file: Path,
     fields: list[tuple[str, str]],
+    filename_prefixes_to_drop: tuple[str, ...],
     move_files_after_parse: bool,
     max_workers,
     logger,
@@ -163,20 +164,31 @@ def run_parser(
     # ---------------------------------------------------------
     # 1. Find all files
     # ---------------------------------------------------------
-    
+
     logger.info("Looking for files to process...")
 
     files = []
+    skipped_count = 0
 
     ignored = {p.resolve() for p in ignored_folders}
+    lowered_prefixes = tuple(prefix.lower() for prefix in filename_prefixes_to_drop)
+
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
             continue
-        files.extend(entry.rglob(config.FILE_EXTENSION))
+
+        for logfile in entry.rglob(config.FILE_EXTENSION):
+            if logfile.name.lower().startswith(lowered_prefixes):
+                skipped_count += 1
+                continue
+
+            files.append(logfile)
+
     total_files = len(files)
 
     logger.info(
-        f"Found {total_files} files. "
+        f"Found {total_files} files "
+        f"({skipped_count} skipped by filename filter). "
         f"Processing with {max_workers} workers..."
     )
 

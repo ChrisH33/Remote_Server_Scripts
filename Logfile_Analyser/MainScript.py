@@ -12,13 +12,6 @@ from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
-
-"""
-- Check utilisation works
-- update tableau with the new data
-- Why isn't the Bravo working correctly?
-"""
-
 # =========================================================================
 # INSTRUMENT REGISTRY
 # Everything that differs between instruments lives here. To add a new
@@ -82,6 +75,7 @@ def main(instrument: str) -> None:
                 ignored_folders={configGen.PROCESSED_DIR},
                 output_file=configGen.SUMMARY_RAW_CSV,
                 fields=configGen.FIELDS,
+                filename_prefixes_to_drop=configDev.FILENAME_PREFIXES_TO_DROP,
                 move_files_after_parse=configGen.MOVE_FILES_AFTER_PARSE,
                 max_workers=configGen.MAX_WORKERS,
                 logger=logger
@@ -103,7 +97,6 @@ def main(instrument: str) -> None:
                     tidy_output_file=configGen.SUMMARY_TIDY_CSV,
                     tidy_fields=configGen.TIDY_FIELDS,
                     statuses_to_drop=configDev.STATUSES_TO_DROP,
-                    filename_prefixes_to_drop=configDev.FILENAME_PREFIXES_TO_DROP,
                     process_types=configGen.PROCESS_TYPES,
                     logger=logger,
                 )

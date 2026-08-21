@@ -23,34 +23,31 @@ FILE_EXTENSION = "*.log"
 SERIAL_RE = re.compile(r"(Bravo\s*-\s*\d+)", re.IGNORECASE)
 
 TIMESTAMP_FORMATS = (
-    "%d/%m/%Y %H:%M:%S",
     "%d-%b-%y %I:%M:%S %p",
+    "%d-%m-%y %I:%M:%S %p",
+    "%d/%m/%Y %H:%M:%S",
+    "%m/%d/%Y %I:%M:%S %p",
 )
 
 PATTERNS = {
-    "run_start": "startup protocol starting",
-    "runset": "starting runset :",
-    "abort": "startup protocol aborted by user",
-    "abort_2": "main protocol aborted by user",
-    "protocol_added": "runset manager: added the run",
-    "protocol_file": ".pro",
+    "run_start": "main protocol starting",
     "complete": "main protocol complete",
-    "complete_2": "cleanup protocol complete",
-    "logout": "logged out",
+    "abort": "main protocol aborted",
 }
+START_PATTERNS = (
+    "run_start",
+)
 END_PATTERNS = (
     "complete",
-    "complete_2",
 )
 ABORT_PATTERNS = (
-    "logout",
     "abort",
-    "abort_2",
 )
 STATUSES_TO_DROP = {
     "Read Error",
     "No Start Found"
 }
 FILENAME_PREFIXES_TO_DROP = (
-    "vworks_pipette_log",
+    "vworks_log",
+    "vworks_time_constraints_log",
 )

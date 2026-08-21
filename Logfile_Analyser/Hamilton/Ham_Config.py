@@ -5,9 +5,9 @@ import re
 # =========================================================================
 
 STEPS_TO_RUN = {
-    "parse_logs":           False,   # Condense traces into a single .csv
-    "clean_logs":           False,   # Tidy raw csv into a Tableau-ready csv
-    "create_log_hyper":     False,   # Convert tidy csv into a hyper file
+    "parse_logs":           True,   # Condense traces into a single .csv
+    "clean_logs":           True,   # Tidy raw csv into a Tableau-ready csv
+    "create_log_hyper":     True,   # Convert tidy csv into a hyper file
     "create_util":          True,   # Create a utilisation report
     "create_util_hyper":    True,   # Convert tidy csv into a hyper file
     "publish_hypers":       True,   # Push hyper file to Tableau server

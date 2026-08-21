@@ -78,7 +78,6 @@ def parse_datetime(
     )
     return None
 
-
 def add_calculated_fields(
     method: str,
     start_time: datetime | None,
@@ -108,7 +107,6 @@ def clean_row(
     raw_row: dict,
     *,
     statuses_to_drop: set[str],
-    filename_prefixes_to_drop: tuple[str, ...],
     process_types: dict[str, dict[str, list[str]]],
     tidy_fields: list[tuple[str, str, str]],
     logger: logging.Logger,
@@ -119,10 +117,6 @@ def clean_row(
 
     # Drop unwanted statuses
     if status in {s.lower() for s in statuses_to_drop}:
-        return None
-
-    # Drop unwanted filenames
-    if filename.startswith(tuple(p.lower() for p in filename_prefixes_to_drop)):
         return None
 
     method = raw_row.get("Method", "")
@@ -166,7 +160,6 @@ def run_cleaner(
     tidy_output_file: Path,
     tidy_fields: list[tuple[str, str, str]],
     statuses_to_drop: set[str],
-    filename_prefixes_to_drop: tuple[str, ...],
     process_types,
     logger: logging.Logger,
 ) -> None:
@@ -214,7 +207,6 @@ def run_cleaner(
             tidy_row = clean_row(
                 raw_row.to_dict(),
                 statuses_to_drop=statuses_to_drop,
-                filename_prefixes_to_drop=filename_prefixes_to_drop,
                 process_types=process_types,
                 tidy_fields=tidy_fields,
                 logger=logger,

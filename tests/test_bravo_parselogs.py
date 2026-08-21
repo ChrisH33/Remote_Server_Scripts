@@ -9,9 +9,8 @@ patching `open`.
 from pathlib import Path
 
 from Logfile_Analyser.Bravo.Bravo_ParseLogs import (
-    parse_timestamp,
+    extract_timestamp,
     extract_method,
-    extract_runset,
     parse_bravo_file,
 )
 
@@ -21,19 +20,19 @@ from Logfile_Analyser.Bravo.Bravo_ParseLogs import (
 # -------------------------------------------------------------------
 
 def test_parse_timestamp_accepts_slash_format():
-    result = parse_timestamp("17/10/2023 14:10:00")
+    result = extract_timestamp("17/10/2023 14:10:00")
     assert result is not None
     assert (result.year, result.month, result.day, result.hour, result.minute) == (2023, 10, 17, 14, 10)
 
 
 def test_parse_timestamp_accepts_dash_format():
-    result = parse_timestamp("17-Oct-23 02:10:00 PM")
+    result = extract_timestamp("17-Oct-23 02:10:00 PM")
     assert result is not None
     assert (result.year, result.month, result.day, result.hour, result.minute) == (2023, 10, 17, 14, 10)
 
 
 def test_parse_timestamp_returns_none_for_garbage():
-    assert parse_timestamp("garbage") is None
+    assert extract_timestamp("garbage") is None
 
 
 # -------------------------------------------------------------------
@@ -47,16 +46,6 @@ def test_extract_method_finds_pro_filename():
 
 def test_extract_method_returns_none_when_absent():
     assert extract_method("No method here") is None
-
-
-def test_extract_runset_extracts_name():
-    line = "Starting runset : MyRunsetName"
-    assert extract_runset(line) == "MyRunsetName"
-
-
-def test_extract_runset_returns_none_when_absent():
-    assert extract_runset("nothing relevant") is None
-
 
 # -------------------------------------------------------------------
 # parse_bravo_file - end-to-end over a synthetic log
@@ -78,7 +67,7 @@ def test_parse_bravo_file_complete_run(tmp_path, logger):
         "17/10/2023 14:30:00\tMain protocol complete",
     ])
 
-    runs = parse_bravo_file(logfile, logger)
+    runs = parse_bravo_file(logfile)
 
     assert len(runs) == 1
     run = runs[0]
@@ -97,7 +86,7 @@ def test_parse_bravo_file_aborted_run(tmp_path, logger):
         "17/10/2023 14:10:00\tMain protocol aborted by user",
     ])
 
-    runs = parse_bravo_file(logfile, logger)
+    runs = parse_bravo_file(logfile)
 
     assert len(runs) == 1
     assert runs[0].status == "Aborted"
@@ -113,7 +102,7 @@ def test_parse_bravo_file_multiple_runs_in_one_file(tmp_path, logger):
         "17/10/2023 15:10:00\tMain protocol complete",
     ])
 
-    runs = parse_bravo_file(logfile, logger)
+    runs = parse_bravo_file(logfile)
 
     assert len(runs) == 2
     assert [r.method for r in runs] == ["CleanUpSPRI.pro", "Pooling.pro"]
@@ -121,4 +110,4 @@ def test_parse_bravo_file_multiple_runs_in_one_file(tmp_path, logger):
 
 def test_parse_bravo_file_missing_file_returns_empty_list(tmp_path, logger):
     missing = tmp_path / "Bravo-1" / "does_not_exist.log"
-    assert parse_bravo_file(missing, logger) == []
+    assert parse_bravo_file(missing) == []

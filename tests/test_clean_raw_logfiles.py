@@ -156,7 +156,6 @@ def test_clean_row_produces_expected_tidy_row(logger):
     row = clean_row(
         _raw_row(),
         statuses_to_drop={"Read Error", "No Start Found"},
-        filename_prefixes_to_drop=("vworks_pipette_log",),
         process_types=PROCESS_TYPES,
         tidy_fields=TIDY_FIELDS,
         logger=logger,
@@ -176,25 +175,11 @@ def test_clean_row_drops_unwanted_status(logger):
     row = clean_row(
         _raw_row(Status="Read Error"),
         statuses_to_drop={"Read Error", "No Start Found"},
-        filename_prefixes_to_drop=(),
         process_types=PROCESS_TYPES,
         tidy_fields=TIDY_FIELDS,
         logger=logger,
     )
     assert row is None
-
-
-def test_clean_row_drops_unwanted_filename_prefix(logger):
-    row = clean_row(
-        _raw_row(Filename="VWorks_Pipette_Log_2023.log"),
-        statuses_to_drop=set(),
-        filename_prefixes_to_drop=("vworks_pipette_log",),
-        process_types=PROCESS_TYPES,
-        tidy_fields=TIDY_FIELDS,
-        logger=logger,
-    )
-    assert row is None
-
 
 # -------------------------------------------------------------------
 # run_cleaner - file I/O + dedupe
@@ -218,7 +203,6 @@ def test_run_cleaner_writes_tidy_rows_and_skips_existing_ids(tmp_path, logger):
         tidy_output_file=tidy_csv,
         tidy_fields=TIDY_FIELDS,
         statuses_to_drop={"Read Error", "No Start Found"},
-        filename_prefixes_to_drop=(),
         process_types=PROCESS_TYPES,
         logger=logger,
     )
@@ -235,7 +219,6 @@ def test_run_cleaner_writes_tidy_rows_and_skips_existing_ids(tmp_path, logger):
         tidy_output_file=tidy_csv,
         tidy_fields=TIDY_FIELDS,
         statuses_to_drop={"Read Error", "No Start Found"},
-        filename_prefixes_to_drop=(),
         process_types=PROCESS_TYPES,
         logger=logger,
     )
