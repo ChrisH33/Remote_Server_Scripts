@@ -34,6 +34,8 @@ STATUSES_TO_DROP = {
     "No Start Found"
 }
 PATTERNS = {
+    "Method Name":      "system : analyze method - start; method file",
+    "serial":           "star : start method command - progress; serial number of instrument:",
     "start":            "system : start method - complete;",
     "end_1":            "system : end method - start;",
     "end_2":            "system : custom dialog - start; <method finished>",
@@ -45,8 +47,6 @@ PATTERNS = {
     "abort_2":          "system : method has been aborted by the user - complete;",
     "abort_3":          "system : method has been aborted by the method - complete;",
     "abort_4":          "system : execute method - error; an error occurred while running vector.",
-    "Method Name":      "system : analyze method - start; method file",
-    "serial":           "star : start method command - progress; serial number of instrument:",
 }
 ABORT_PATTERNS = (
     "abort_1",
@@ -60,5 +60,9 @@ END_PATTERNS = (
     "end_3",
     "end_4",
     "end_5",
-    "end_6"
+    "end_6",
+    "abort_1",
+    "abort_2",
+    "abort_3",
+    "abort_4",
 )

@@ -7,7 +7,7 @@ import Logfile_Analyser.Main_Config as configGen
 from Logfile_Analyser.Generic._CleanRawLogfiles import run_cleaner
 from Logfile_Analyser.Generic._CreateHyperFile import create_hyper_from_csv
 from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hypers_to_tableau
-from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments
+from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments, StaleCheckConfig
 from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
@@ -75,7 +75,6 @@ def main(instrument: str) -> None:
                 ignored_folders={configGen.PROCESSED_DIR},
                 output_file=configGen.SUMMARY_RAW_CSV,
                 fields=configGen.FIELDS,
-                filename_prefixes_to_drop=configDev.FILENAME_PREFIXES_TO_DROP,
                 move_files_after_parse=configGen.MOVE_FILES_AFTER_PARSE,
                 max_workers=configGen.MAX_WORKERS,
                 logger=logger
@@ -199,12 +198,15 @@ def main(instrument: str) -> None:
         try:
             if configGen.SUMMARY_TIDY_CSV.exists():
                 check_stale_instruments(
-                    configGen.SUMMARY_TIDY_CSV,
-                    configGen.DAYS_BEFORE_STALE,
-                    configGen.INSTRUMENT_DIR,
-                    configGen.PROCESSED_DIR,
-                    configGen.STALE_INSTRUMENT_CSV,
-                    logger)
+                    StaleCheckConfig(
+                        tidy_csv=configGen.SUMMARY_TIDY_CSV,
+                        log_folder=configGen.INSTRUMENT_DIR,
+                        processed_folder=configGen.PROCESSED_DIR,
+                        warning_file=configGen.STALE_INSTRUMENT_CSV,
+                        stale_days=configGen.DAYS_BEFORE_STALE,
+                    ),
+                    logger,
+                )
             else:
                 raise FileNotFoundError("Tidy log.cvs file not found")
         except Exception:

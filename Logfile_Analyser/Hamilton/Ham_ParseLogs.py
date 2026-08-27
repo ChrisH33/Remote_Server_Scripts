@@ -5,40 +5,38 @@ import Logfile_Analyser.Hamilton.Ham_Config as config
 import csv
 import shutil
 
-
 # =========================================================================
 # FUNCTIONS
 # =========================================================================
 
-def parse_timestamp(
-    line: str,
-    filename: str,
-    logger
-) -> datetime | None:
-    timestamp = line[:19]
+def parse_timestamp(line: str) -> datetime | None:
+    timestamp = line.lower()[:19]
     try:
         return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        logger.warning(f"{filename}: Invalid timestamp {timestamp!r}")
         return None
 
-def process_file(
-    logfile: Path,
-    logger,
-    *,
-    fields: list[tuple[str, str]],
-) -> tuple[Path, list] | None:
+def parse_method_name(line: str):
+    match = config.METHOD_RE.search(line)
+    if match:
+        return match.group(1)
+    return None
+
+def parse_status(line: str):
+    is_abort = any(config.PATTERNS[key] in line.lower() for key in config.ABORT_PATTERNS)
+    status = "Aborted" if is_abort else "Complete"
+    return status
+
+def parse_simulation_mode(line: str):
+    match = config.SERIAL_RE.search(line.lower())
+    if match:
+        serial = match.group(1).strip()
+        return "Sim" if serial == "0000" else "Live"
+    return None
+
+def process_file(logfile: Path, fields: list[tuple[str, str]]) -> tuple[Path, list] | None:
     """Parse one logfile and return its path and extracted data."""
-
-    start_time = None
-    end_time = None
-    status = None
-    method = None
-
-    sim_mode = "Sim"
-
-    # The timestamp for an end/abort event is two lines before
-    # the event line.
+    start_time = end_time = status = method = sim_mode = None
     previous_lines = []
 
     try:
@@ -46,66 +44,47 @@ def process_file(
             for line in file:
                 line_lower = line.lower()
 
-                # Method name
+                # Method Name
                 if method is None and config.PATTERNS["Method Name"] in line_lower:
-                    match = config.METHOD_RE.search(line)
-                    if match:
-                        method = match.group(1)
+                    method = parse_method_name(line)
 
-                # Serial number / simulation mode
-                if sim_mode == "Sim" and config.PATTERNS["serial"] in line_lower:
-                    match = config.SERIAL_RE.search(line)
-
-                    if match:
-                        serial = match.group(1).strip()
-                        sim_mode = "Sim" if serial == "0000" else "Live"
-                    else:
-                        sim_mode = "undefined"
+                # Simulation Mode
+                if sim_mode is None and config.PATTERNS["serial"] in line_lower:
+                    sim_mode = parse_simulation_mode(line)
 
                 # Start time
-                if start_time is None:
-                    if config.PATTERNS["start"] in line_lower:
-                        start_time = parse_timestamp(line, logfile.name, logger)
-                        if start_time is None:
-                            break
+                if start_time is None and config.PATTERNS["start"] in line_lower:
+                    start_time = parse_timestamp(line)
+                    if start_time is None:
+                        break
 
                 # End / abort
-                else:
-                    is_end = any(config.PATTERNS[key] in line_lower for key in config.END_PATTERNS)
-                    is_abort = any(config.PATTERNS[key] in line_lower for key in config.ABORT_PATTERNS)
-
-                    if is_end or is_abort:
-                        if len(previous_lines) >= 2:
-                            end_time = parse_timestamp(previous_lines[-2], logfile.name, logger)
-                        status = "Complete" if is_end else "Aborted"
-                        break
+                if start_time is not None and any(config.PATTERNS[key] in line_lower for key in config.END_PATTERNS):
+                    end_time = parse_timestamp(previous_lines[-2])
+                    status = parse_status(line_lower)
+                    break
 
                 # Keep the last two lines for end/abort timestamp lookup
                 previous_lines.append(line)
-
                 if len(previous_lines) > 2:
                     previous_lines.pop(0)
 
-    except OSError as e:
-        logger.error(f"Failed to read {logfile}: {e}")
-        status = "Read Error"
+    except OSError:
+        status = "Logfile Read Error"
 
     # Started but no end/abort event found
     if start_time is not None and status is None:
         status = "Incomplete"
-
         if previous_lines:
-            end_time = parse_timestamp(
-                previous_lines[-1],
-                logfile.name,
-                logger,
-            )
+            end_time = parse_timestamp(previous_lines[-1])
 
     # No start event found
     elif start_time is None and status is None:
         status = "No Start Found"
 
-    info = {
+    row_data = {
+        "instrument": logfile.parent.name,
+        "filename": logfile.name,
         "start_time": start_time,
         "end_time": end_time,
         "status": status,
@@ -113,47 +92,28 @@ def process_file(
         "method": method,
     }
 
-    instrument = logfile.parent.name
-
-    row_data = {
-        "instrument": instrument,
-        "filename": logfile.name,
-        **info,
-    }
-
     row = [row_data.get(key) for key, _ in fields]
 
     return logfile, row
 
-def write_results(
-    rows: list[list],
-    output_file: Path,
-    fields: list[tuple[str, str]],
-) -> None:
+def write_results(rows: list[list], output_file: Path, fields: list[tuple[str, str]]) -> None:
     """Write all parsed results to the CSV."""
-
-    with output_file.open(
-        "a",
-        newline="",
-        encoding="utf-8",
-    ) as file:
+    with output_file.open("a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
+        # If creating the file, add the headers
         if output_file.stat().st_size == 0:
-            writer.writerow(
-                [display_name for _, display_name in fields]
-            )
+            writer.writerow([display_name for _, display_name in fields])
 
+        # Add the data
         writer.writerows(rows)
 
 def run_parser(
-    *,
     log_folder: Path,
     processed_folder: Path,
     ignored_folders: set[Path],
     output_file: Path,
     fields: list[tuple[str, str]],
-    filename_prefixes_to_drop: tuple[str, ...],
     move_files_after_parse: bool,
     max_workers,
     logger,
@@ -171,7 +131,7 @@ def run_parser(
     skipped_count = 0
 
     ignored = {p.resolve() for p in ignored_folders}
-    lowered_prefixes = tuple(prefix.lower() for prefix in filename_prefixes_to_drop)
+    lowered_prefixes = tuple(prefix.lower() for prefix in config.FILENAME_PREFIXES_TO_DROP)
 
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
@@ -200,12 +160,7 @@ def run_parser(
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(
-                process_file,
-                logfile,
-                logger,
-                fields=fields,
-            ): logfile
+            executor.submit(process_file, logfile, fields=fields): logfile
             for logfile in files
         }
 
@@ -213,19 +168,22 @@ def run_parser(
             logfile = futures[future]
             try:
                 result = future.result()
-                if result is not None:
-                    results.append(result)
-                    if count % 1000 == 0:
-                        logger.info(f"Processed {count}/{total_files} files")
-                    
+                results.append(result) if result is not None else None
 
+                # Occasional update log
+                if count % 1000 == 0:
+                    logger.info(f"Processed {count}/{total_files} files")
+                    
             except Exception:
                 logger.exception(f"Error processing {logfile.name}")
+
     logger.info(f"Finished parsing {len(results)}/{total_files} files")
 
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
     # ---------------------------------------------------------
+
+    logger.info(f"Writing results to {output_file}")
 
     rows = [row for _, row in results]
     existing_ids = set()
@@ -251,21 +209,14 @@ def run_parser(
         for logfile, _ in results:
             instrument_folder = logfile.parent.name
             destination_folder = (processed_folder / instrument_folder)
-
             destination_folder.mkdir(parents=True, exist_ok=True)
             destination = (destination_folder / logfile.name)
-
 
             try:
                 shutil.move(str(logfile), str(destination))
             except OSError as e:
-                logger.warning(
-                    f"Parsed {logfile.name}, "
-                    f"but could not move it: {e}"
-                )
+                logger.warning(f"Parsed {logfile.name} but could not move it: {e}")
     else:
         logger.info("Skipping logfile transfer")
 
-    logger.info(
-        f"Finished. {len(rows)} results saved to {Path(output_file).name}"
-    )
+    logger.info(f"Finished. {len(rows)} results saved to {Path(output_file).name}")
