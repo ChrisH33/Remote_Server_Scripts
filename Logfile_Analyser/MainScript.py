@@ -72,11 +72,7 @@ def main(instrument: str) -> None:
             run_parser(
                 log_folder=configGen.INSTRUMENT_DIR,
                 processed_folder=configGen.PROCESSED_DIR,
-                ignored_folders={configGen.PROCESSED_DIR},
                 output_file=configGen.SUMMARY_RAW_CSV,
-                fields=configGen.FIELDS,
-                move_files_after_parse=configGen.MOVE_FILES_AFTER_PARSE,
-                max_workers=configGen.MAX_WORKERS,
                 logger=logger
             )
         except Exception:
@@ -94,9 +90,6 @@ def main(instrument: str) -> None:
                 run_cleaner(
                     raw_input_file=configGen.SUMMARY_RAW_CSV,
                     tidy_output_file=configGen.SUMMARY_TIDY_CSV,
-                    tidy_fields=configGen.TIDY_FIELDS,
-                    statuses_to_drop=configDev.STATUSES_TO_DROP,
-                    process_types=configGen.PROCESS_TYPES,
                     logger=logger,
                 )
             else:
@@ -116,7 +109,7 @@ def main(instrument: str) -> None:
                 create_hyper_from_csv(
                     csv_path=configGen.SUMMARY_TIDY_CSV,
                     hyper_path=configGen.SUMMARY_TIDY_HYPER,
-                    column_headers=configGen.TIDY_FIELDS,
+                    column_headers=configGen.CSV_FIELDS,
                     logger=logger,
                 )
             else:

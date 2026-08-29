@@ -3,54 +3,35 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+import Logfile_Analyser.Main_Config as general_config
 
+csv_fields = general_config.CSV_FIELDS
+process_types = general_config.PROCESS_TYPES
+date_formats = general_config.DATETIME_FORMATS
 
-def get_unique_ids(df: pd.DataFrame) -> set:
+# =========================================================================
+# BASE FUNCTIONS
+# =========================================================================
+
+def get_unique_ids(df) -> set:
     """Return unique IDs from column 2 of a DataFrame."""
     return set(df.iloc[:, 1].dropna())
 
-def extract_process_type_and_method(
-    method: str,
-    process_types: dict[str, dict[str, list[str]]],
-    logger: logging.Logger,
-) -> tuple[str, str]:
-    try:
-        text = method.upper()
-    except AttributeError:
-        logger.warning(f"Invalid method: {method!r}")
-        return "Unknown", "Unknown"
-
+def extract_process_type_and_method(method, process_types) -> tuple[str, str]:
     for process_type, simplified_methods in process_types.items():
         for simplified, variants in simplified_methods.items():
-            if any(v.casefold() == text.casefold() for v in variants):
+            if any(v.casefold() == method.casefold() for v in variants):
                 return process_type, simplified
 
     return "Unknown", "Unknown"
 
-def extract_run_date(
-    timestamp: datetime | None,
-) -> str:
-    if timestamp:
-        return timestamp.date().isoformat()
+def extract_run_date(timestamp) -> str:
+    return timestamp.date().isoformat()
 
-    return ""
+def calculate_run_duration(start_time, end_time) -> float:
+    return round(((end_time - start_time).total_seconds() / 60), 2)
 
-def calculate_run_duration(
-    start_time: datetime | None,
-    end_time: datetime | None,
-) -> float | str:
-    if start_time and end_time:
-        return round(
-            (end_time - start_time).total_seconds() / 60,
-            2,
-        )
-
-    return ""
-
-def parse_datetime(
-    value: str,
-    logger: logging.Logger,
-) -> datetime | None:
+def parse_datetime(value, logger) -> datetime | None:
 
     if value is None:
         logger.warning("Missing datetime value")
@@ -62,12 +43,8 @@ def parse_datetime(
         logger.warning("Missing datetime value")
         return None
 
-    formats = (
-        "%Y-%m-%d %H:%M:%S",  # 2023-10-17 14:10:00
-        "%d/%m/%Y %H:%M",     # 17/10/2023 14:10
-    )
 
-    for fmt in formats:
+    for fmt in date_formats:
         try:
             return datetime.strptime(value, fmt)
         except ValueError:
@@ -90,7 +67,6 @@ def add_calculated_fields(
     process_type, simplified_method = extract_process_type_and_method(
         method,
         process_types,
-        logger,
     )
 
     return {
@@ -103,10 +79,13 @@ def add_calculated_fields(
         "method_simplified": simplified_method,
     }
 
+# =========================================================================
+# COMPLEX FUNCTIONS
+# =========================================================================
+
 def clean_row(
     raw_row: dict,
     *,
-    statuses_to_drop: set[str],
     process_types: dict[str, dict[str, list[str]]],
     tidy_fields: list[tuple[str, str, str]],
     logger: logging.Logger,
@@ -114,10 +93,6 @@ def clean_row(
 
     status = (raw_row.get("Status") or "").strip().lower()
     filename = (raw_row.get("Filename") or "").strip().lower()
-
-    # Drop unwanted statuses
-    if status in {s.lower() for s in statuses_to_drop}:
-        return None
 
     method = raw_row.get("Method", "")
     start_time = parse_datetime(
@@ -154,14 +129,15 @@ def clean_row(
         for key, _, _ in tidy_fields
     ]
 
+# =========================================================================
+# MAIN PROCESS
+# =========================================================================
+
 def run_cleaner(
     *,
     raw_input_file: Path,
     tidy_output_file: Path,
-    tidy_fields: list[tuple[str, str, str]],
-    statuses_to_drop: set[str],
-    process_types,
-    logger: logging.Logger,
+    logger,
 ) -> None:
 
     # Check raw input exists
@@ -206,9 +182,8 @@ def run_cleaner(
         try:
             tidy_row = clean_row(
                 raw_row.to_dict(),
-                statuses_to_drop=statuses_to_drop,
                 process_types=process_types,
-                tidy_fields=tidy_fields,
+                tidy_fields=csv_fields,
                 logger=logger,
             )
         except Exception:
@@ -229,7 +204,7 @@ def run_cleaner(
         with open(tidy_output_file, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             if header_needed:
-                writer.writerow([display_name for _, display_name, _ in tidy_fields])
+                writer.writerow([display_name for _, display_name, _ in csv_fields])
             writer.writerows(tidy_rows)
         logger.info(f"Wrote {len(tidy_rows)} new rows to {tidy_output_file}")
     else:

@@ -49,6 +49,34 @@ TABLEAU_DATASETS = [
 # CONFIG - the settings you're most likely to want to change
 # =========================================================================
 
+DATETIME_FORMATS = (
+    "%d-%b-%y %I:%M:%S %p",
+    "%d-%m-%y %I:%M:%S %p",
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%Y %H:%M",
+    "%m/%d/%Y %I:%M:%S %p",
+    "%Y-%m-%d %H:%M:%S",
+)
+
+SKIP_LINES = {
+    "tracelevel : trace_02 - complete; ~~~~~~",
+    "tracelevel : tracesequence - "
+}
+
+STATUSES_TO_DROP = {
+    "Read Error",
+    "No Start Found"
+}
+
+FILENAME_PREFIXES_TO_DROP = (
+    "vworks_log",
+    "vworks_time_constraints_log",
+    "HxUsbComm",
+    "ComTrace_Simulator",
+    "Hamilton Backup Utility",
+    "BioMedInstrument",
+)
+
 PIPELINE_CODES = {
     "ISC",
     "LCMB",
@@ -57,17 +85,7 @@ PIPELINE_CODES = {
     "Ultima"
 }
 
-FIELDS = [
-    ("instrument", "Instrument"),
-    ("filename", "Filename"),
-    ("start_time", "Start Time"),
-    ("end_time", "End Time"),
-    ("status", "Status"),
-    ("sim_mode", "Sim Mode"),
-    ("method", "Method"),
-]
-
-TIDY_FIELDS = [
+CSV_FIELDS = [
     ("instrument",              "Instrument",           "text"),
     ("filename",                "Filename",             "text"),
     ("start_time",              "Start Time",           "datetime"),
