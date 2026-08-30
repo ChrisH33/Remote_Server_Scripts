@@ -94,7 +94,8 @@ def run_parse_logs():
         log_folder=INSTRUMENT_DIR,
         output_file=LOGFILES_CSV,
         fields=LOG_FIELDS,
-        logger=logger
+        logger=logger,
+        move_files=False
     )
 
 

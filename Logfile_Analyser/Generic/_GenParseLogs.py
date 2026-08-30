@@ -26,8 +26,6 @@ HAMILTON_SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNO
 # General Definitions - VARIABLE
 # =========================================================================
 
-MOVE_FILES_AFTER_PARSE = False
-
 FILE_EXTENSIONS = (
     "*.log",
     "*.trc",
@@ -90,8 +88,6 @@ class MethodRun:
     run_date: Optional[str] = None
     process_type: Optional[str] = None
     method_simplified: Optional[str] = None
-
-MAX_WORKERS = min(8, os.cpu_count() or 8)  # currently unused; parsing is sequential
 
 # =========================================================================
 # Basic Functions
@@ -171,18 +167,6 @@ def process_file(logfile: Path) -> List[MethodRun]:
     """Parse one logfile and return the MethodRuns found in it."""
     runs: List[MethodRun] = []
     current_run: Optional[MethodRun] = None
-
-    # Method name and Sim/Live mode can both appear on lines seen *before*
-    # the line that officially opens a run. A Hamilton log typically reports
-    # "Analyze method - Start; method file ...hsl" and the instrument serial
-    # number while the run is still starting up, and only later logs
-    # "Start method - Complete;" (the line START_PATTERNS actually matches
-    # on). The original implementation only looked at lines *after*
-    # current_run existed, so the run's method and sim/live mode were
-    # silently dropped whenever they appeared before the start line.
-    # Tracking them as "pending" values fixes that, and also still works
-    # for logs (e.g. Bravo) where the method name is on the start line
-    # itself.
     pending_method: Optional[str] = None
     pending_sim_mode: Optional[str] = None
     last_line = ""
@@ -360,7 +344,11 @@ def run_parser(
     # ---------------------------------------------------------
 
     results: List[Tuple[Path, MethodRun]] = []
-    for logfile in files:
+
+    for i, logfile in enumerate(files, start=1):
+        if i % 1000 == 0:
+            logger.info(f"Processed {i:,} files...")
+
         try:
             runs = process_file(logfile)
         except OSError as e:
@@ -376,11 +364,6 @@ def run_parser(
     # 3. De-duplicate against anything already written, then write
     #    the new results to CSV.
     # ---------------------------------------------------------
-    # BUG FIX: previously every parsed run was appended unconditionally.
-    # If move_files is False (MainScript's default), files never leave the
-    # source folder, so every run of the pipeline would re-add every run
-    # from every historic logfile, duplicating rows in the tidy CSV (and
-    # therefore in Tableau) each time it ran.
 
     existing_keys = load_existing_keys(output_file)
     new_results: List[Tuple[Path, MethodRun]] = []
@@ -394,25 +377,17 @@ def run_parser(
         new_results.append((logfile, run))
 
     if duplicate_count:
-        logger.info(
-            f"Skipped {duplicate_count} run(s) already present in {output_file.name}"
-        )
+        logger.info(f"Skipped {duplicate_count} run(s) already present in {output_file.name}")
 
     logger.info(f"Writing results to {output_file}")
 
-    tidy_rows = [
-        calculate_fields(run, fields, process_types)
-        for _, run in new_results
-    ]
+    tidy_rows = [calculate_fields(run, fields, process_types)for _, run in new_results]
     if tidy_rows:
         write_results(tidy_rows, output_file, fields)
 
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed
     # ---------------------------------------------------------
-    # NB: this moves every file that was successfully *parsed*, not just
-    # the ones that produced new (non-duplicate) rows - once a file has
-    # been read, there's no reason to read it again.
 
     if move_files:
         logger.info("Moving parsed files to Processed...")
