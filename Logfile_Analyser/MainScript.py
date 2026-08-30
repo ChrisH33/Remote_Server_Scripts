@@ -9,10 +9,6 @@ from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
-# ----- Pick the Folder -----
-# PARENT_DIR = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-# PARENT_DIR = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-PARENT_DIR = Path(r"C:\Users\ch33\Documents")
 
 # =========================================================================
 # CONFIG - the settings you're most likely to want to change
@@ -57,44 +53,43 @@ LOG_FIELDS = [
 # instrument, add an entry — no other code in this file needs to change.
 # =========================================================================
 
-def load_instrument(instrument: str):
-    """Import the instrument-specific config + parser and set up its logger."""
-    INSTRUMENT_DIR = PARENT_DIR / instrument
-    logger = get_logger(f"{instrument}_logs")
+# ----- Pick the Folder -----
+# PARENT_DIR = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+# PARENT_DIR = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+PARENT_DIR = Path(r"C:\Users\ch33\Documents")
 
+# ----- Pick an instrument -----
+# INSTRUMENT = "Bravo"
+INSTRUMENT = "Hamilton"
 
-    LOGFILES_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
-    UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
-    STALE_INSTRUMENT_TXT = INSTRUMENT_DIR / "stale_instruments.txt"
+INSTRUMENT_DIR = PARENT_DIR / INSTRUMENT
+logger = get_logger(f"{INSTRUMENT}_logs")
 
+LOGFILES_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
+UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
+STALE_INSTRUMENT_TXT = INSTRUMENT_DIR / "stale_instruments.txt"
 
-    TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
-    LOGFILES_TABLEAU = f"{instrument} Tidy Logs"
-    UTILISATION_TABLEAU = f"{instrument} Utilisation"
+TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
+LOGFILES_TABLEAU = f"{INSTRUMENT} Tidy Logs"
+UTILISATION_TABLEAU = f"{INSTRUMENT} Utilisation"
 
-
-    return INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, UTILISATION_TABLEAU, TABLEAU_PROJECT_ID, LOGFILES_TABLEAU
+def step_trace(str, step):
+    step = f"Step {STEPS_TO_RUN.index(step) + 1}/{len(STEPS_TO_RUN)}"
+    str = str.lower()
+    if str == "start":
+        logger.info(f"========== {step}: Running step ==========")
+    elif str == "error":
+        logger.exception(f"!! {step} failed - stopping workflow")
+        sys.exit(1)
+    elif str == "end":
+        logger.info(f"---------- {step}: Skipping step ----------")
 
 # =========================================================================
 # MAIN SCRIPT - performs the full workflow for whichever instrument is passed
 # =========================================================================
 
+
 def main(instrument: str) -> None:
-    INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, UTILISATION_TABLEAU, TABLEAU_PROJECT_ID, LOGFILES_TABLEAU  = load_instrument(instrument)
-    STEP_ORDER = list(STEPS_TO_RUN.keys())
-
-    def step_trace(str, step):
-        step = f"Step {STEP_ORDER.index(step) + 1}/{len(STEP_ORDER)}"
-        str = str.lower()
-        if str == "start":
-            logger.info(f"========== {step}: Running step ==========")
-        elif str == "error":
-            logger.exception(f"!! {step} failed - stopping workflow")
-            sys.exit(1)
-        elif str == "end":
-            logger.info(f"---------- {step}: Skipping step ----------")
-
-
 
     # 1. Condense traces into a single .csv
     # ---------------------------------------------------------------------
@@ -224,6 +219,4 @@ def main(instrument: str) -> None:
 
 
 if __name__ == "__main__":
-    arg_parser = argparse.ArgumentParser(description="Run the Logfile Analyser pipeline for a given instrument.")
-    args = arg_parser.parse_args()
-    main(args.instrument)
+    main()
