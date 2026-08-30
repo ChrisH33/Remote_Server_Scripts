@@ -3,21 +3,19 @@ from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import Logfile_Analyser.Bravo.Bravo_Config as config
+import Logfile_Analyser.Main_Config as config
+import Logfile_Analyser.Generic._GenParseLogs as parse_logs
 import csv
 import shutil
 import re
 
-# ============================================================================
-# HELPERS
-# ============================================================================
 
-def extract_timestamp(line: str):
-    parts = line.split("\t")
-    if not parts:
-        return None
+# =========================================================================
+# FUNCTIONS
+# =========================================================================
 
-    value = parts[0].strip()
+def parse_timestamp(line: str) -> datetime | None:
+    value = line.split("\t", 1)[0].strip()
     if not value:
         return None
 
@@ -25,188 +23,81 @@ def extract_timestamp(line: str):
         try:
             return datetime.strptime(value, fmt)
         except ValueError:
-            pass
+            continue
 
-    print(f"Could not retrieve timestamp: {value}")
     return None
 
-def extract_method(line):
-    match = re.search(r"([^\\]+\.pro)", line, re.IGNORECASE)
-    if match:
-        return match.group(1)
-    return None
 
-# ============================================================================
-# RUN OBJECT
-# ============================================================================
-
-@dataclass
-class BravoRun:
-    instrument: Optional[str] = None
-    uniqueID: Optional[str] = None
-    status: str = "Incomplete"
-    sim_mode: Optional[str] = None
-    method: Optional[str] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-
-# ============================================================================
-# PARSER
-# ============================================================================
-
-def parse_bravo_file(logfile: Path):
+def process_file(logfile: Path):
+    """Parse one logfile and return its path and extracted data."""
     runs = []
     current_run = None
     last_line = None
 
-    try:
-        with logfile.open("r", encoding="utf-8", errors="ignore") as file:
-            for raw_line in file:
-                line = raw_line.rstrip("\n")
-                last_line = line
-                line_lower = line.lower()
+    with logfile.open("r", encoding="utf-8", errors="ignore") as file:
+        for raw_line in file:
+            line = raw_line.rstrip("\n")
+            last_line = line
+            line_lower = line.lower()
 
-                # ---------------------------------------------------------
-                # New run detected
-                # ---------------------------------------------------------
-                if any(
-                    config.PATTERNS[key] in line_lower
-                    for key in config.START_PATTERNS
-                ):
-                    current_run = BravoRun()
-                    current_run.instrument = logfile.parent.name
-                    current_run.start_time = extract_timestamp(line)
+            # ---------------------------------------------------------
+            # New run detected
+            # ---------------------------------------------------------
+            if any(i in line_lower for i in START_PATTERNS.values()):
+                current_run = BravoRun()
+                current_run.instrument = logfile.parent.name
+                current_run.start_time = parse_timestamp(line)
 
-                    method = extract_method(line)
-                    if method:
-                        current_run.method = method
+                method = parse_method_name(line)
+                if method:
+                    current_run.method = method
 
-                # Ignore pre-run information
-                if current_run is None:
-                    continue
+            # Ignore pre-run information
+            if current_run is None:
+                continue
 
-                # ---------------------------------------------------------
-                # Method extraction
-                # ---------------------------------------------------------
-                if current_run.method is None:
-                    method = extract_method(line)
-                    if method:
-                        current_run.method = method
 
-                # ---------------------------------------------------------
-                # Run completion
-                # ---------------------------------------------------------
-                is_end = any(
-                    config.PATTERNS[key] in line_lower
-                    for key in config.END_PATTERNS
+
+            # Method Name
+            if current_run.method is None:
+                current_run.method = parse_method_name(line)
+
+            # End / abort
+            if current_run.start_time is not None:
+                if any(i in line_lower for i in END_PATTERNS.values()):
+                    current_run.end_time = parse_timestamp(line_lower)
+                    current_run.status = parse_status(line_lower)
+
+            # Unique FileID
+            if current_run.method and current_run.start_time:
+                current_run.uniqueID = (
+                    f"{current_run.instrument}_"
+                    f"{current_run.start_time:%Y%m%d_%H%M%S}_"
+                    f"{current_run.method}"
                 )
 
-                is_abort = any(
-                    config.PATTERNS[key] in line_lower
-                    for key in config.ABORT_PATTERNS
-                )
+                runs.append(current_run)
+                current_run = None
 
-                if (is_end or is_abort) and current_run.end_time is None:
-                    current_run.end_time = extract_timestamp(line)
-                    current_run.status = (
-                        "Complete" if is_end else "Aborted"
-                    )
-
-                    if current_run.method and current_run.start_time:
-                        current_run.uniqueID = (
-                            f"{current_run.instrument}_"
-                            f"{current_run.start_time:%Y%m%d_%H%M%S}_"
-                            f"{current_run.method}"
-                        )
-
-                    runs.append(current_run)
-                    current_run = None
-
-    except OSError:
-        return []
 
     # ---------------------------------------------------------
     # End of file fallback
     # ---------------------------------------------------------
     if current_run:
-        if current_run.end_time is None and last_line:
-            current_run.end_time = extract_timestamp(last_line)
-
-        if current_run.method and current_run.start_time:
-            current_run.uniqueID = (
-                f"{current_run.instrument}_"
-                f"{current_run.start_time:%Y%m%d_%H%M%S}_"
-                f"{current_run.method}"
-            )
-
+        if current_run.status == "Incomplete":
+            current_run.end_time = parse_timestamp(last_line)
         runs.append(current_run)
-
+    
     return runs
-
-# ============================================================================
-# CSV OUTPUT
-# ============================================================================
-
-def write_results(
-    rows: list[list],
-    output_file: Path,
-    fields: list[tuple[str, str]],
-) -> None:
-    """Write all parsed results to the CSV."""
-
-    with output_file.open(
-        "a",
-        newline="",
-        encoding="utf-8",
-    ) as file:
-        writer = csv.writer(file)
-
-        if output_file.stat().st_size == 0:
-            writer.writerow(
-                [display_name for _, display_name in fields]
-            )
-
-        writer.writerows(rows)
 
 # ============================================================================
 # MAIN PARSER
 # ============================================================================
 
-def run_parser(
-    log_folder: Path,
-    processed_folder: Path,
-    ignored_folders: set[Path],
-    output_file: Path,
-    fields: list[tuple[str, str]],
-    filename_prefixes_to_drop: tuple[str, ...],
-    move_files_after_parse: bool,
-    max_workers,
-    logger,
-) -> None:
+def run_parser(log_folder: Path, output_file: Path, logger) -> None:
 
     logger.info("=== Log parser starting ===")
-    logger.info("Looking for files to process...")
 
-    files = []
-    skipped_count = 0
-    lowered_prefixes = tuple(p.lower() for p in filename_prefixes_to_drop)
-
-    ignored = {p.resolve() for p in ignored_folders}
-    for entry in log_folder.iterdir():
-        if not entry.is_dir() or entry.resolve() in ignored:
-            continue
-        for logfile in entry.rglob(config.FILE_EXTENSION):
-            if logfile.name.lower().startswith(lowered_prefixes):
-                skipped_count += 1
-                continue
-            files.append(logfile)
-    total_files = len(files)
-
-    logger.info(
-        f"Found {total_files} files to parse "
-        f"({skipped_count} skipped by filename filter). "
-        f"Processing with {max_workers} workers..."
-    )
 
     # ---------------------------------------------------------
     # 2. Parse every file
@@ -215,37 +106,36 @@ def run_parser(
     results = []
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(
-                parse_bravo_file,
-                logfile,
-            ): logfile
-            for logfile in files
-        }
+        futures = {executor.submit(process_file, logfile,): logfile for logfile in files}
 
         for count, future in enumerate(as_completed(futures), start=1):
             logfile = futures[future]
-
             try:
                 result = future.result()
-                if result is not None:
-                    results.append((logfile, result))
-                    if count % 1000 == 0:
-                        logger.info(f"Processed {count}/{total_files} files") 
+                results.append(result) if result is not None else None
+
+                # Occasional update log
+                if count % 1000 == 0:
+                    logger.info(f"Processed {count}/{total_files} files")
+                    
             except Exception:
                 logger.exception(f"Error processing {logfile.name}")
+
     logger.info(f"Parsed {len(results)}/{total_files} files")
 
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
     # ---------------------------------------------------------
-    
+
+    logger.info(f"Writing results to {output_file}")
+
     runs = [run for _, logfile_runs in results for run in logfile_runs]
 
     rows = [
         [
             run.instrument,
             run.uniqueID,
+
             run.start_time,
             run.end_time,
             run.status,
@@ -263,32 +153,28 @@ def run_parser(
             existing_ids = {row[1] for row in reader if len(row) > 1}
     new_rows = [row for row in rows if row[1] not in existing_ids]
     if new_rows:
-        write_results(new_rows, output_file, fields)
+        parse_logs.write_results(new_rows, output_file, csv_fields)
         logger.info(f"Saved {len(new_rows)} new results to {output_file}")
+    else:
+        logger.info("No new results to save")
 
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed
     # ---------------------------------------------------------
 
-    if move_files_after_parse:
+    logger.info("Moving parsed files to Processed...")
+
+    if move_files:
         for logfile, _ in results:
             instrument_folder = logfile.parent.name
             destination_folder = (processed_folder / instrument_folder)
-
             destination_folder.mkdir(parents=True, exist_ok=True)
             destination = (destination_folder / logfile.name)
-
-
             try:
                 shutil.move(str(logfile), str(destination))
             except OSError as e:
-                logger.warning(
-                    f"Parsed {logfile.name}, "
-                    f"but could not move it: {e}"
-                )
+                logger.warning(f"Parsed {logfile.name} but could not move it: {e}")
     else:
         logger.info("Skipping logfile transfer")
 
-    logger.info(
-        f"Finished. {len(rows)} results saved to {Path(output_file).name}"
-    )
+    logger.info(f"Finished. {len(rows)} results saved to {Path(output_file).name}")

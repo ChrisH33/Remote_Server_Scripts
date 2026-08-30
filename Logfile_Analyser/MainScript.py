@@ -3,7 +3,7 @@ import argparse
 import importlib
 from Logging_Util import get_logger
 from creds import Tableau_Credentials as credentials
-import Logfile_Analyser.Main_Config as configGen
+import Logfile_Analyser.Main_Config as config
 from Logfile_Analyser.Generic._CleanRawLogfiles import run_cleaner
 from Logfile_Analyser.Generic._CreateHyperFile import create_hyper_from_csv
 from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hypers_to_tableau
@@ -20,35 +20,34 @@ from SlackClientWrapper import _config as slack_config
 
 INSTRUMENT_REGISTRY = {
     "bravo": {
-        "config_module": "Logfile_Analyser.Bravo.Bravo_Config",
         "parser_module": "Logfile_Analyser.Bravo.Bravo_ParseLogs",
         "logger_name": "Bravo_parse",
+        "workflow": "BRAVO_STEPS_TO_RUN",
     },
     "hamilton": {
-        "config_module": "Logfile_Analyser.Hamilton.Ham_Config",
         "parser_module": "Logfile_Analyser.Hamilton.Ham_ParseLogs",
         "logger_name": "Hamilton_Parse",
+        "workflow": "HAMILTON_STEPS_TO_RUN",
     },
 }
 
 def load_instrument(instrument: str):
     """Import the instrument-specific config + parser and set up its logger."""
     spec = INSTRUMENT_REGISTRY[instrument]
-    config = importlib.import_module(spec["config_module"])
     parser_mod = importlib.import_module(spec["parser_module"])
     logger = get_logger(spec["logger_name"])
-    return config, parser_mod.run_parser, logger
+    return parser_mod.run_parser, logger
 
 # =========================================================================
 # MAIN SCRIPT - performs the full workflow for whichever instrument is passed
 # =========================================================================
 def main(instrument: str) -> None:
-    configDev, run_parser, logger = load_instrument(instrument)
-    workflow = configDev.STEPS_TO_RUN
+    run_parser, logger = load_instrument(instrument)
+    workflow = config.WORKFLOW
     STEP_ORDER = list(workflow.keys())
 
     # Check the Instrument Config is loaded correctly
-    if instrument.lower() not in configGen.INSTRUMENT_DIR.name.lower():
+    if instrument.lower() not in config.INSTRUMENT_DIR.name.lower():
         logger.info(f"!! Wrong instrument selected in Main_Config.py")
         return
 
@@ -69,12 +68,15 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            run_parser(
-                log_folder=configGen.INSTRUMENT_DIR,
-                processed_folder=configGen.PROCESSED_DIR,
-                output_file=configGen.SUMMARY_RAW_CSV,
-                logger=logger
-            )
+            if config.INSTRUMENT_DIR.exists():
+                run_parser(
+                    log_folder=config.INSTRUMENT_DIR,
+                    processed_folder=config.PROCESSED_DIR,
+                    output_file=config.SUMMARY_RAW_CSV,
+                    logger=logger
+                )
+            else:
+                raise FileNotFoundError("Instrument log folder not found")
         except Exception:
             step_trace("error", step)
     else:
@@ -86,14 +88,11 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.SUMMARY_RAW_CSV.exists():
-                run_cleaner(
-                    raw_input_file=configGen.SUMMARY_RAW_CSV,
-                    tidy_output_file=configGen.SUMMARY_TIDY_CSV,
-                    logger=logger,
-                )
-            else:
-                raise FileNotFoundError("Raw logfile.csv cannot be found")
+            run_cleaner(
+                raw_input_file=config.SUMMARY_RAW_CSV,
+                tidy_output_file=config.SUMMARY_TIDY_CSV,
+                logger=logger,
+            )
         except Exception:
             step_trace("error", step)
     else:
@@ -105,11 +104,11 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.SUMMARY_TIDY_CSV.exists():
+            if config.SUMMARY_TIDY_CSV.exists():
                 create_hyper_from_csv(
-                    csv_path=configGen.SUMMARY_TIDY_CSV,
-                    hyper_path=configGen.SUMMARY_TIDY_HYPER,
-                    column_headers=configGen.CSV_FIELDS,
+                    csv_path=config.SUMMARY_TIDY_CSV,
+                    hyper_path=config.SUMMARY_TIDY_HYPER,
+                    column_headers=config.CSV_FIELDS,
                     logger=logger,
                 )
             else:
@@ -125,11 +124,11 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.SUMMARY_TIDY_CSV.exists():
+            if config.SUMMARY_TIDY_CSV.exists():
                 run_hourly_utilisation(
-                    summary_file=configGen.SUMMARY_TIDY_CSV,
-                    output_file=configGen.UTILISATION_CSV,
-                    exclude_weekends=configGen.EXCLUDE_WEEKENDS,
+                    summary_file=config.SUMMARY_TIDY_CSV,
+                    output_file=config.UTILISATION_CSV,
+                    exclude_weekends=config.EXCLUDE_WEEKENDS,
                     days=40,
                     logger=logger,
                 )
@@ -146,11 +145,11 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.UTILISATION_CSV.exists():
+            if config.UTILISATION_CSV.exists():
                 create_hyper_from_csv(
-                    csv_path=configGen.UTILISATION_CSV,
-                    hyper_path=configGen.UTILISATION_HYPER,
-                    column_headers=configGen.UTIL_FIELDS,
+                    csv_path=config.UTILISATION_CSV,
+                    hyper_path=config.UTILISATION_HYPER,
+                    column_headers=config.UTIL_FIELDS,
                     logger=logger,
                 )
             else:
@@ -166,13 +165,13 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.SUMMARY_TIDY_HYPER.exists() or configGen.UTILISATION_HYPER.exists():
+            if config.SUMMARY_TIDY_HYPER.exists() or config.UTILISATION_HYPER.exists():
                 publish_hypers_to_tableau(
-                    datasets=configGen.TABLEAU_DATASETS,
-                    project_id=configGen.TABLEAU_PROJECT_ID,
+                    datasets=config.TABLEAU_DATASETS,
+                    project_id=config.TABLEAU_PROJECT_ID,
                     logger=logger,
-                    server_url=configGen.TABLEAU_SERVER_ADDRESS,
-                    site_id=configGen.TABLEAU_SITE_ID,
+                    server_url=config.TABLEAU_SERVER_ADDRESS,
+                    site_id=config.TABLEAU_SITE_ID,
                     token_name=credentials.TOKEN_NAME,
                     token_secret=credentials.TOKEN_SECRET,
                 )
@@ -189,14 +188,14 @@ def main(instrument: str) -> None:
     if workflow[step]:
         step_trace("start", step)
         try:
-            if configGen.SUMMARY_TIDY_CSV.exists():
+            if config.SUMMARY_TIDY_CSV.exists():
                 check_stale_instruments(
                     StaleCheckConfig(
-                        tidy_csv=configGen.SUMMARY_TIDY_CSV,
-                        log_folder=configGen.INSTRUMENT_DIR,
-                        processed_folder=configGen.PROCESSED_DIR,
-                        warning_file=configGen.STALE_INSTRUMENT_CSV,
-                        stale_days=configGen.DAYS_BEFORE_STALE,
+                        tidy_csv=config.SUMMARY_TIDY_CSV,
+                        log_folder=config.INSTRUMENT_DIR,
+                        processed_folder=config.PROCESSED_DIR,
+                        warning_file=config.STALE_INSTRUMENT_CSV,
+                        stale_days=config.DAYS_BEFORE_STALE,
                     ),
                     logger,
                 )
@@ -216,7 +215,7 @@ def main(instrument: str) -> None:
             slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)
             slack.send_message(
                 channel=slack_config.PRIVATE_CHANNEL_ID,
-                text=getattr(configGen, "SLACK_COMPLETION_MESSAGE", f"{instrument.title()} logs pipeline complete ✅"),
+                text=getattr(config, "SLACK_COMPLETION_MESSAGE", f"{instrument.title()} logs pipeline complete ✅"),
             )
         except Exception:
             step_trace("error", step)

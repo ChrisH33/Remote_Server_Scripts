@@ -12,30 +12,29 @@ from tableauhyperapi import (
     Inserter,
 )
 
+type_definitions = {
+    "text": (SqlType.text(), lambda value: value),
+    "int": (SqlType.big_int(), lambda value: int(value)),
+    "float": (SqlType.double(), lambda value: float(value)),
+    "datetime": (SqlType.timestamp(), lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M:%S")),
+    "date": (SqlType.date(), lambda value: datetime.strptime(value, "%Y-%m-%d").date()),
+}
 
-def create_hyper_from_csv(
-    csv_path: Path,
-    hyper_path: Path,
-    column_headers: list[tuple[str, str, str]],
-    logger,
+def create_hyper_from_csv(csv_path: Path, hyper_path: Path, column_headers: list[tuple[str, str, str]], logger) -> None:
+    
     schema_name: str = "Extract",
     table_name: str = "Extract",
-) -> None:
-
     logger.info("Starting Hyper file creation from %s",hyper_path.name)
 
-    # ------------------------------------------------------------------
-    # Type definitions
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------
+    # 1. Check Files Exist
+    # ---------------------------------------------------------
 
-    type_definitions = {
-        "text": (SqlType.text(), lambda value: value),
-        "int": (SqlType.big_int(), lambda value: int(value)),
-        "float": (SqlType.double(), lambda value: float(value)),
-        "datetime": (SqlType.timestamp(), lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M:%S")),
-        "date": (SqlType.date(), lambda value: datetime.strptime(value, "%Y-%m-%d").date()),
-    }
-
+    # Check input exists
+    if not csv_path.exists():
+        logger.error(f"Raw input file not found: {csv_path}")
+        return
+    
     # ------------------------------------------------------------------
     # Build schema
     # ------------------------------------------------------------------
@@ -46,10 +45,7 @@ def create_hyper_from_csv(
             raise ValueError(f"Unknown field type '{field_type} for column '{column_name}'")
         sql_type, _ = type_definitions[field_type]
         columns.append(TableDefinition.Column(column_name, sql_type))
-    table = TableDefinition(
-        table_name=TableName(schema_name, table_name),
-        columns=columns,
-    )
+    table = TableDefinition(table_name=TableName(schema_name, table_name), columns=columns)
 
     # ------------------------------------------------------------------
     # Validate CSV headers
@@ -64,7 +60,7 @@ def create_hyper_from_csv(
 
             if headers != expected_headers:
                 raise ValueError(
-                    "CSV headers do not match TIDY_FIELDS.\n"
+                    "CSV headers do not match.\n"
                     f"Expected: {expected_headers}\n"
                     f"Found:    {headers}"
                 )
@@ -72,8 +68,6 @@ def create_hyper_from_csv(
     except Exception:
         logger.exception("CSV header validation failed for %s", csv_path)
         raise
-
-    logger.info("CSV headers validated successfully")
 
     # ------------------------------------------------------------------
     # Validate CSV data
