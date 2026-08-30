@@ -91,19 +91,6 @@ class MethodRun:
     process_type: Optional[str] = None
     method_simplified: Optional[str] = None
 
-CSV_FIELDS = [
-    ("instrument",              "Instrument",           "text"),
-    ("filename",                "Filename",             "text"),
-    ("start_time",              "Start Time",           "datetime"),
-    ("end_time",                "End Time",             "datetime"),
-    ("status",                  "Status",               "text"),
-    ("sim_mode",                "Sim Mode",             "text"),
-    ("method",                  "Method",               "text"),
-    ("run_duration_minutes",    "Run Duration (min)",   "float"),
-    ("run_date",                "Run Date",             "date"),
-    ("process_type",            "Process Type",         "text"),
-    ("method_simplified",       "Method Simp.",         "text"),
-]
 MAX_WORKERS = min(8, os.cpu_count() or 8)  # currently unused; parsing is sequential
 
 # =========================================================================
@@ -342,17 +329,13 @@ def write_results(
 def run_parser(
     log_folder: Path,
     output_file: Path,
+    fields,
     logger,
     *,
     move_files: bool = False,
 ) -> None:
 
-    # BUG FIX: this used to be read as `config.MOVE_FILES_AFTER_PARSE` at
-    # *import* time (before _ProcessTypes.MOVE_FILES_AFTER_PARSE even
-    # existed), which crashed on import. It's now read at call time, and
-    # callers (e.g. MainScript.py) can override it explicitly.
     process_types = config.PROCESS_TYPES
-
     logger.info("=== Log parser starting ===")
 
     # ---------------------------------------------------------
@@ -416,11 +399,11 @@ def run_parser(
     logger.info(f"Writing results to {output_file}")
 
     tidy_rows = [
-        calculate_fields(run, CSV_FIELDS, process_types)
+        calculate_fields(run, fields, process_types)
         for _, run in new_results
     ]
     if tidy_rows:
-        write_results(tidy_rows, output_file, CSV_FIELDS)
+        write_results(tidy_rows, output_file, fields)
 
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed

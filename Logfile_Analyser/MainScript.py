@@ -27,6 +27,30 @@ STEPS_TO_RUN = {
     "send_slack":           False,   # Send an update to Slack informing users of run success
 }
 
+UTIL_FIELDS = [
+    ("instrument",              "Instrument",           "text"),
+    ("date",                    "Date",                 "date"),
+    ("hour",                    "Hour",                 "int"),
+    ("hour_start",              "Hour Start",           "datetime"),
+    ("run_minutes",             "Run Minutes",          "float"),
+    ("available_minutes",       "Available Minutes",    "int"),
+    ("utilisation",             "Utilisation",          "float"),
+]
+
+LOG_FIELDS = [
+    ("instrument",              "Instrument",           "text"),
+    ("filename",                "Filename",             "text"),
+    ("start_time",              "Start Time",           "datetime"),
+    ("end_time",                "End Time",             "datetime"),
+    ("status",                  "Status",               "text"),
+    ("sim_mode",                "Sim Mode",             "text"),
+    ("method",                  "Method",               "text"),
+    ("run_duration_minutes",    "Run Duration (min)",   "float"),
+    ("run_date",                "Run Date",             "date"),
+    ("process_type",            "Process Type",         "text"),
+    ("method_simplified",       "Method Simp.",         "text"),
+]
+
 # =========================================================================
 # INSTRUMENT REGISTRY
 # Everything that differs between instruments lives here. To add a new
@@ -38,28 +62,25 @@ def load_instrument(instrument: str):
     INSTRUMENT_DIR = PARENT_DIR / instrument
     logger = get_logger(f"{instrument}_logs")
 
+
     LOGFILES_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
     UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
     STALE_INSTRUMENT_TXT = INSTRUMENT_DIR / "stale_instruments.txt"
 
-    LOGFILES_HYPER = INSTRUMENT_DIR / "TidyLogs.hyper"
-    UTILISATION_HYPER = INSTRUMENT_DIR / "InstrumentUtilisation.hyper"
 
-    TABLEAU_DB_LOG_NAME = f"{instrument} Tidy Logs"
-    TABLEAU_DB_UTIL_NAME = f"{instrument} Utilisation"
-    TABLEAU_DATASETS = [
-        (LOGFILES_HYPER, TABLEAU_DB_LOG_NAME),
-        (UTILISATION_HYPER, TABLEAU_DB_UTIL_NAME),
-    ]
+    TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
+    LOGFILES_TABLEAU = f"{instrument} Tidy Logs"
+    UTILISATION_TABLEAU = f"{instrument} Utilisation"
 
-    return INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, LOGFILES_HYPER, UTILISATION_HYPER, TABLEAU_DATASETS
+
+    return INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, UTILISATION_TABLEAU, TABLEAU_PROJECT_ID, LOGFILES_TABLEAU
 
 # =========================================================================
 # MAIN SCRIPT - performs the full workflow for whichever instrument is passed
 # =========================================================================
 
 def main(instrument: str) -> None:
-    INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, LOGFILES_HYPER, UTILISATION_HYPER, TABLEAU_DATASETS = load_instrument(instrument)
+    INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, UTILISATION_TABLEAU, TABLEAU_PROJECT_ID, LOGFILES_TABLEAU  = load_instrument(instrument)
     STEP_ORDER = list(STEPS_TO_RUN.keys())
 
     def step_trace(str, step):
@@ -73,6 +94,8 @@ def main(instrument: str) -> None:
         elif str == "end":
             logger.info(f"---------- {step}: Skipping step ----------")
 
+
+
     # 1. Condense traces into a single .csv
     # ---------------------------------------------------------------------
     step = "parse_logs"
@@ -80,13 +103,20 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if INSTRUMENT_DIR.exists():
-                run_parser(log_folder=INSTRUMENT_DIR, output_file=LOGFILES_CSV, logger=logger)
+                run_parser(
+                    log_folder=INSTRUMENT_DIR,
+                    output_file=LOGFILES_CSV,
+                    fields=LOG_FIELDS,
+                    logger=logger
+                )
             else:
                 raise FileNotFoundError("Instrument log folder not found")
         except Exception:
             step_trace("error", step)
     else:
         step_trace("end", step)
+
+
 
     # 2. Create Utilisation Report
     # ---------------------------------------------------------------------
@@ -95,13 +125,19 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if LOGFILES_CSV.exists():
-                run_hourly_utilisation(summary_file=LOGFILES_CSV, output_file=UTILISATION_CSV, logger=logger)
+                run_hourly_utilisation(
+                    summary_file=LOGFILES_CSV,
+                    output_file=UTILISATION_CSV,
+                    logger=logger
+                )
             else:
                 raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
             step_trace("error", step)
     else:
         step_trace("end", step)
+
+
 
     # 3. Create a hyper file & send to Tableau
     # ---------------------------------------------------------------------
@@ -110,13 +146,21 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if LOGFILES_CSV.exists():
-                create_hyper_from_csv(csv_path=LOGFILES_CSV, hyper_path=LOGFILES_HYPER, logger=logger)
+                create_hyper_from_csv(
+                    csv_path=LOGFILES_CSV,
+                    datasource_name=LOGFILES_TABLEAU,
+                    column_headers=LOG_FIELDS,
+                    project_id=TABLEAU_PROJECT_ID,
+                    logger=logger
+                )
             else:
                 raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
             step_trace("error", step)  
     else:
         step_trace("end", step)
+
+
 
     # 4. Create a hyper file & send to Tableau
     # ---------------------------------------------------------------------
@@ -125,13 +169,21 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if UTILISATION_CSV.exists():
-                create_hyper_from_csv(csv_path=UTILISATION_CSV, hyper_path=UTILISATION_HYPER, logger=logger)
+                create_hyper_from_csv(
+                    csv_path=UTILISATION_CSV,
+                    datasource_name=UTILISATION_TABLEAU,
+                    column_headers=UTIL_FIELDS,
+                    project_id=TABLEAU_PROJECT_ID,
+                    logger=logger
+                )
             else:
                 raise FileNotFoundError("Utilisation.csv file not found")
         except Exception:
             step_trace("error", step)
     else:
         step_trace("end", step)
+
+
 
     # 5. Check Instrument Activity
     # ---------------------------------------------------------------------
@@ -140,13 +192,19 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if LOGFILES_CSV.exists():
-                check_stale_instruments(log_csv=LOGFILES_CSV, output_txt=STALE_INSTRUMENT_TXT, logger=logger)
+                check_stale_instruments(
+                    log_csv=LOGFILES_CSV,
+                    output_txt=STALE_INSTRUMENT_TXT,
+                    logger=logger
+                )
             else:
-                raise FileNotFoundError("Tidy log.cvs file not found")
+                raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
             step_trace("error", step)
     else:
         step_trace("end", step)
+
+
 
     # 6. Optional Slack notification
     # ---------------------------------------------------------------------
@@ -163,6 +221,8 @@ def main(instrument: str) -> None:
             step_trace("error", step)
     else:
         step_trace("end", step)
+
+
 
 
 if __name__ == "__main__":

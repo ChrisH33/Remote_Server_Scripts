@@ -2,26 +2,12 @@ from typing import cast
 from pathlib import Path
 import pandas as pd
 
-UTIL_FIELDS = [
-    ("instrument",              "Instrument",           "text"),
-    ("date",                    "Date",                 "date"),
-    ("hour",                    "Hour",                 "int"),
-    ("hour_start",              "Hour Start",           "datetime"),
-    ("run_minutes",             "Run Minutes",          "float"),
-    ("available_minutes",       "Available Minutes",    "int"),
-    ("utilisation",             "Utilisation",          "float"),
-]
 
 # =========================================================================
 # CORE CALCULATION
 # =========================================================================
 
-def calc_hourly_util(
-    df: pd.DataFrame,
-    days: int,
-    *,
-    include_idle_instruments: bool = False,
-) -> pd.DataFrame:
+def calc_hourly_util(df, days, *, include_idle_instruments):
     
     # Convert timestamps
     df["Start Time"] = pd.to_datetime(df["Start Time"], errors="coerce")
@@ -65,16 +51,8 @@ def calc_hourly_util(
     # Create complete hourly scaffold
     # --------------------------------------------------------
 
-    hours = pd.date_range(
-        start=analysis_start,
-        end=analysis_end - pd.Timedelta(hours=1),
-        freq="h"
-    )
-
-    scaffold = pd.MultiIndex.from_product(
-        [instruments, hours],
-        names=["Instrument", "Hour Start"]
-    ).to_frame(index=False)
+    hours = pd.date_range(start=analysis_start, end=analysis_end - pd.Timedelta(hours=1), freq="h")
+    scaffold = pd.MultiIndex.from_product([instruments, hours], names=["Instrument", "Hour Start"]).to_frame(index=False)
 
     # --------------------------------------------------------
     # Calculate overlap between every run and every hour
@@ -108,20 +86,8 @@ def calc_hourly_util(
 
     if utilisation:
         utilisation_df = pd.DataFrame(utilisation)
-        utilisation_df = (
-            utilisation_df
-            .groupby(
-                ["Instrument", "Hour Start"],
-                as_index=False
-            )["Run Minutes"]
-            .sum()
-        )
-
-        scaffold = scaffold.merge(
-            utilisation_df,
-            on=["Instrument", "Hour Start"],
-            how="left"
-        )
+        utilisation_df = (utilisation_df.groupby(["Instrument", "Hour Start"], as_index=False)["Run Minutes"].sum())
+        scaffold = scaffold.merge(utilisation_df, on=["Instrument", "Hour Start"], how="left")
     else:
         scaffold["Run Minutes"] = 0
 
@@ -148,8 +114,7 @@ def calc_hourly_util(
     ]]
 
 # =========================================================================
-# PIPELINE ENTRY POINT (matches the style of _CleanRawLogfiles.run_cleaner,
-# _CheckHistoricLogs.check_stale_instruments, etc.)
+# PIPELINE ENTRY POINT
 # =========================================================================
 
 def run_hourly_utilisation(
@@ -162,20 +127,10 @@ def run_hourly_utilisation(
     include_idle_instruments: bool = False,
 ) -> None:
 
-    # Check the summary_file is readable
-    try:
-        df = pd.read_csv(summary_file)
-    except Exception:
-        logger.exception(f"Failed to read {summary_file}")
-        return
-
     # Calculate the hourly utilisation
     try:
-        result = calc_hourly_util(
-            df,
-            days,
-            include_idle_instruments=include_idle_instruments,
-        )
+        df = pd.read_csv(summary_file)
+        result = calc_hourly_util(df, days, include_idle_instruments=include_idle_instruments)
     except Exception:
         logger.exception("Failed to calculate hourly utilisation")
         return
@@ -184,25 +139,12 @@ def run_hourly_utilisation(
     if exclude_weekends:
         result = result[pd.to_datetime(result["Date"]).dt.weekday < 5]  # Mon=0 ... Sun=6
 
-    # Drop hours with no recorded run time - only rows with actual usage are written
-    # result = result[result["Run Minutes"] > 0]
-
-    if result.empty:
-        logger.warning(
-            f"No utilisation data produced - all rows had zero run minutes "
-            f"in the trailing {days} day(s)."
-        )
-        return
-
     # Create output file
-    try:
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        result.to_csv(output_file, index=False)
-        logger.info(
-            f"Wrote hourly utilisation for {result['Instrument'].nunique()} "
-            f"instrument(s) across {days} day(s) "
-            f"({len(result)} rows) to {output_file}"
-        )
-    except OSError:
-        logger.exception(f"Failed to write {output_file}")
-        return
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    result.to_csv(output_file, index=False)
+
+    logger.info(
+        f"Wrote hourly utilisation for {result['Instrument'].nunique()} "
+        f"instrument(s) across {days} day(s) "
+        f"({len(result)} rows) to {output_file}"
+    )
