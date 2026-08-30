@@ -26,6 +26,8 @@ HAMILTON_SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNO
 # General Definitions - VARIABLE
 # =========================================================================
 
+MOVE_FILES_AFTER_PARSE = False
+
 FILE_EXTENSIONS = (
     "*.log",
     "*.trc",
@@ -108,7 +110,7 @@ MAX_WORKERS = min(8, os.cpu_count() or 8)  # currently unused; parsing is sequen
 # Basic Functions
 # =========================================================================
 
-def parse_timestamp(line: str) -> Optional[datetime]:
+def parse_timestamp(line: str):
     """Try to pull a timestamp out of a log line and parse it."""
     if not line:
         return None
@@ -123,27 +125,27 @@ def parse_timestamp(line: str) -> Optional[datetime]:
     candidates.append(line)  # fallback: maybe the whole line is a timestamp
 
     for candidate in candidates:
-        for fmt in DATETIME_FORMATS:
+        for _ in DATETIME_FORMATS:
             try:
-                return datetime.strptime(candidate, fmt)
+                return datetime.strptime(candidate, "%Y-%m-%d %H:%M:%S")
             except ValueError:
                 continue
     return None
 
-def parse_method_name(line: str) -> Optional[str]:
+def parse_method_name(line: str):
     for pattern in (BRAVO_METHOD_RE, HAMILTON_METHOD_RE):
         match = pattern.search(line)
         if match:
             return match.group(1)
     return None
 
-def parse_status(line_lower: str) -> Optional[str]:
+def parse_status(line_lower: str):
     for key, pattern in END_PATTERNS.items():
         if pattern in line_lower:
             return "Complete" if key.startswith("end") else "Aborted"
     return None
 
-def parse_simulation_mode(line: str) -> Optional[str]:
+def parse_simulation_mode(line: str):
     # Hamilton logs report a serial number; "0000" indicates simulation mode.
     match = HAMILTON_SERIAL_RE.search(line)
     if match:
@@ -341,15 +343,14 @@ def run_parser(
     log_folder: Path,
     output_file: Path,
     logger,
-    move_files: Optional[bool] = None,
+    *,
+    move_files: bool = False,
 ) -> None:
 
     # BUG FIX: this used to be read as `config.MOVE_FILES_AFTER_PARSE` at
     # *import* time (before _ProcessTypes.MOVE_FILES_AFTER_PARSE even
     # existed), which crashed on import. It's now read at call time, and
     # callers (e.g. MainScript.py) can override it explicitly.
-    if move_files is None:
-        move_files = config.MOVE_FILES_AFTER_PARSE
     process_types = config.PROCESS_TYPES
 
     logger.info("=== Log parser starting ===")

@@ -153,12 +153,12 @@ def calc_hourly_util(
 # =========================================================================
 
 def run_hourly_utilisation(
-    *,
     summary_file: Path,
     output_file: Path,
-    days: int,
-    exclude_weekends: bool,
     logger,
+    *,
+    days: int = 100,
+    exclude_weekends: bool = True,
     include_idle_instruments: bool = False,
 ) -> None:
 
