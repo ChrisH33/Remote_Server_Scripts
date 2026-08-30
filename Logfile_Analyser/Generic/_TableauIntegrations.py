@@ -142,8 +142,8 @@ def publish_hyper_to_tableau(
 def publish_csv_to_tableau(csv_path: Path, datasource_name: str, column_headers: list[tuple[str, str, str]], project_id: str, logger) -> None:
 
     hyper_path = csv_path.with_suffix(".hyper")
-    token_name = credentials.TABLEAU_TOKEN_NAME
-    token_secret = credentials.TABLEAU_TOKEN_SECRET
+    token_name = credentials.TOKEN_NAME
+    token_secret = credentials.TOKEN_SECRET
     TABLEAU_SERVER_ADDRESS = "https://globalreporting.internal.sanger.ac.uk"
     TABLEAU_SITE_ID = ""
 

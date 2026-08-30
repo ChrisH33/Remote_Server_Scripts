@@ -185,7 +185,7 @@ def process_file(logfile: Path) -> List[MethodRun]:
     # itself.
     pending_method: Optional[str] = None
     pending_sim_mode: Optional[str] = None
-    last_line = None
+    last_line = ""
 
     with logfile.open("r", encoding="utf-8", errors="ignore") as file:
         for raw_line in file:
@@ -232,7 +232,9 @@ def process_file(logfile: Path) -> List[MethodRun]:
             # End / abort — this is what actually closes out a run
             if any(pattern in line_lower for pattern in END_PATTERNS.values()):
                 current_run.end_time = parse_timestamp(line)
-                current_run.status = parse_status(line_lower)
+                status = parse_status(line_lower)
+                if status:
+                    current_run.status = status
                 runs.append(current_run)
                 current_run = None
 

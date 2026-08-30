@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse
 from Logging_Util import get_logger
 from Logfile_Analyser.Generic._GenParseLogs import run_parser
-from Logfile_Analyser.Generic._TableauIntegrations import create_hyper_from_csv
+from Logfile_Analyser.Generic._TableauIntegrations import publish_csv_to_tableau
 from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments
 from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
@@ -146,7 +146,7 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if LOGFILES_CSV.exists():
-                create_hyper_from_csv(
+                publish_csv_to_tableau(
                     csv_path=LOGFILES_CSV,
                     datasource_name=LOGFILES_TABLEAU,
                     column_headers=LOG_FIELDS,
@@ -169,7 +169,7 @@ def main(instrument: str) -> None:
         step_trace("start", step)
         try:
             if UTILISATION_CSV.exists():
-                create_hyper_from_csv(
+                publish_csv_to_tableau(
                     csv_path=UTILISATION_CSV,
                     datasource_name=UTILISATION_TABLEAU,
                     column_headers=UTIL_FIELDS,
@@ -221,8 +221,6 @@ def main(instrument: str) -> None:
             step_trace("error", step)
     else:
         step_trace("end", step)
-
-
 
 
 if __name__ == "__main__":
