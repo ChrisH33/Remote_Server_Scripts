@@ -12,7 +12,7 @@ from Logfile_Analyser.Hamilton.Ham_ParseLogs import (
     write_results,
     run_parser
 )
-from Logfile_Analyser.Main_Config import FIELDS
+from Logfile_Analyser._ProcessTypes import FIELDS
 
 
 # =========================================================================

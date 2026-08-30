@@ -2,6 +2,16 @@ from typing import cast
 from pathlib import Path
 import pandas as pd
 
+UTIL_FIELDS = [
+    ("instrument",              "Instrument",           "text"),
+    ("date",                    "Date",                 "date"),
+    ("hour",                    "Hour",                 "int"),
+    ("hour_start",              "Hour Start",           "datetime"),
+    ("run_minutes",             "Run Minutes",          "float"),
+    ("available_minutes",       "Available Minutes",    "int"),
+    ("utilisation",             "Utilisation",          "float"),
+]
+
 # =========================================================================
 # CORE CALCULATION
 # =========================================================================

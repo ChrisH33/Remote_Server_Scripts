@@ -1,82 +1,6 @@
-from pathlib import Path
-
-# ----- Pick the Folder -----
-# PARENT_DIR = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-# PARENT_DIR = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
-PARENT_DIR = Path(r"C:\Users\ch33\Documents")
-
-# ----- Pick the Instrument -----
-#INSTRUMENT = "Bravo"
-INSTRUMENT = "Hamilton"
-
 # =========================================================================
-# CONFIG - the settings you're most likely to want to change
+# PROCESS TYPES - the settings you're most likely to want to change
 # =========================================================================
-
-HAMILTON_STEPS_TO_RUN = {
-    "parse_logs":           True,   # Condense traces into a single .csv
-    "clean_logs":           False,   # Tidy raw csv into a Tableau-ready csv
-    "create_log_hyper":     False,   # Convert tidy csv into a hyper file
-    "create_util":          False,   # Create a utilisation report
-    "create_util_hyper":    False,   # Convert tidy csv into a hyper file
-    "publish_hypers":       False,   # Push hyper file to Tableau server
-    "check_stale":          False,   # Create a warning if an instrument has gone quiet for too long
-    "send_slack":           False,   # Send an update to Slack informing users of run success
-}
-
-BRAVO_STEPS_TO_RUN = {
-    "parse_logs":           True,   # Condense traces into a single .csv
-    "clean_logs":           True,   # Tidy raw csv into a Tableau-ready csv
-    "create_log_hyper":     True,   # Convert tidy csv into a hyper file
-    "create_util":          True,   # Create a utilisation report
-    "create_util_hyper":    True,   # Convert tidy csv into a hyper file
-    "publish_hypers":       True,   # Push hyper file to Tableau server
-    "check_stale":          True,   # Create a warning if an instrument has gone quiet for too long
-    "send_slack":           True,   # Send an update to Slack informing users of run success
-}
-
-# =========================================================================
-# CONFIG - the settings you're most likely to want to change
-# =========================================================================
-
-INSTRUMENT_DIR = PARENT_DIR / INSTRUMENT
-
-LOGFILES_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
-UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
-STALE_INSTRUMENT_TXT = INSTRUMENT_DIR / "stale_instruments.txt"
-
-LOGFILES_HYPER = INSTRUMENT_DIR / "TidyLogs.hyper"
-UTILISATION_HYPER = INSTRUMENT_DIR / "InstrumentUtilisation.hyper"
-
-TABLEAU_DB_LOG_NAME = f"{INSTRUMENT} Tidy Logs"
-TABLEAU_DB_UTIL_NAME = f"{INSTRUMENT} Utilisation"
-TABLEAU_DATASETS = [
-    (LOGFILES_HYPER, TABLEAU_DB_LOG_NAME),
-    (UTILISATION_HYPER, TABLEAU_DB_UTIL_NAME),
-]
-
-TABLEAU_SERVER_ADDRESS = "https://globalreporting.internal.sanger.ac.uk"
-TABLEAU_SITE_ID = ""
-TABLEAU_PROJECT_ID = "0c88cccd-6f5c-4cd5-9641-f01c10fdbc3e"
-
-DAYS_BEFORE_STALE = 45
-DAYS_TO_ANALYSE = 100
-MOVE_FILES_AFTER_PARSE = False
-EXCLUDE_WEEKENDS = True  # flip to False to include Sat/Sun in utilisation output
-
-# =========================================================================
-# CONFIG - the settings you're most likely to want to change
-# =========================================================================
-
-UTIL_FIELDS = [
-    ("instrument",              "Instrument",           "text"),
-    ("date",                    "Date",                 "date"),
-    ("hour",                    "Hour",                 "int"),
-    ("hour_start",              "Hour Start",           "datetime"),
-    ("run_minutes",             "Run Minutes",          "float"),
-    ("available_minutes",       "Available Minutes",    "int"),
-    ("utilisation",             "Utilisation",          "float"),
-]
 
 PROCESS_TYPES = {
     "Clean Up": {
@@ -459,7 +383,6 @@ PROCESS_TYPES = {
         "SGE-MAVE_SampleDilution": [
             "SGE_SAMPLEDILUTION_V2.0",
         ],
-
     },
     "Pooling": {
         "384 1-24 Pooling": [

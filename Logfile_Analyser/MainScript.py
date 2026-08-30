@@ -1,16 +1,40 @@
 import sys
+from pathlib import Path
 import argparse
-import importlib
 from Logging_Util import get_logger
-from creds import Tableau_Credentials as credentials
-import Logfile_Analyser.Main_Config as config
-from Logfile_Analyser.Generic._CleanRawLogfiles import run_cleaner
-from Logfile_Analyser.Generic._CreateHyperFile import create_hyper_from_csv
-from Logfile_Analyser.Generic._PublishHyperToTableau import publish_hypers_to_tableau
+from Logfile_Analyser.Generic._GenParseLogs import run_parser
+from Logfile_Analyser.Generic._TableauIntegrations import create_hyper_from_csv
 from Logfile_Analyser.Generic._CheckHistoricLogs import check_stale_instruments, StaleCheckConfig
 from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
+
+# ----- Pick the Folder -----
+# PARENT_DIR = Path(r"\\file01-s0\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+# PARENT_DIR = Path(r"W:\0.051 Research & Development\Instrumentation\Logfiles")  # <-- Logfile location
+PARENT_DIR = Path(r"C:\Users\ch33\Documents")
+
+# ----- Pick the Instrument -----
+#INSTRUMENT = "Bravo"
+INSTRUMENT = "Hamilton"
+
+# =========================================================================
+# CONFIG - the settings you're most likely to want to change
+# =========================================================================
+
+STEPS_TO_RUN = {
+    "parse_logs":           True,   # Condense traces into a single .csv
+    "create_log_hyper":     True,   # Convert tidy csv into a hyper file
+    "create_util":          True,   # Create a utilisation report
+    "create_util_hyper":    True,   # Convert tidy csv into a hyper file
+    "check_stale":          True,   # Create a warning if an instrument has gone quiet for too long
+    "send_slack":           True,   # Send an update to Slack informing users of run success
+}
+
+DAYS_BEFORE_STALE = 45
+DAYS_TO_ANALYSE = 100
+MOVE_FILES_AFTER_PARSE = False
+EXCLUDE_WEEKENDS = True
 
 # =========================================================================
 # INSTRUMENT REGISTRY
@@ -18,38 +42,34 @@ from SlackClientWrapper import _config as slack_config
 # instrument, add an entry — no other code in this file needs to change.
 # =========================================================================
 
-INSTRUMENT_REGISTRY = {
-    "bravo": {
-        "parser_module": "Logfile_Analyser.Bravo.Bravo_ParseLogs",
-        "logger_name": "Bravo_parse",
-        "workflow": "BRAVO_STEPS_TO_RUN",
-    },
-    "hamilton": {
-        "parser_module": "Logfile_Analyser.Hamilton.Ham_ParseLogs",
-        "logger_name": "Hamilton_Parse",
-        "workflow": "HAMILTON_STEPS_TO_RUN",
-    },
-}
 
 def load_instrument(instrument: str):
     """Import the instrument-specific config + parser and set up its logger."""
-    spec = INSTRUMENT_REGISTRY[instrument]
-    parser_mod = importlib.import_module(spec["parser_module"])
-    logger = get_logger(spec["logger_name"])
-    return parser_mod.run_parser, logger
+    INSTRUMENT_DIR = PARENT_DIR / instrument
+    logger = get_logger(f"{INSTRUMENT}_main")
+
+    LOGFILES_CSV = INSTRUMENT_DIR / "TidyLogs_ForTableau.csv"
+    UTILISATION_CSV = INSTRUMENT_DIR / "InstrumentUtilisation.csv"
+    STALE_INSTRUMENT_TXT = INSTRUMENT_DIR / "stale_instruments.txt"
+
+    LOGFILES_HYPER = INSTRUMENT_DIR / "TidyLogs.hyper"
+    UTILISATION_HYPER = INSTRUMENT_DIR / "InstrumentUtilisation.hyper"
+
+    TABLEAU_DB_LOG_NAME = f"{INSTRUMENT} Tidy Logs"
+    TABLEAU_DB_UTIL_NAME = f"{INSTRUMENT} Utilisation"
+    TABLEAU_DATASETS = [
+        (LOGFILES_HYPER, TABLEAU_DB_LOG_NAME),
+        (UTILISATION_HYPER, TABLEAU_DB_UTIL_NAME),
+]
+
+    return INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, LOGFILES_HYPER, UTILISATION_HYPER, TABLEAU_DATASETS
 
 # =========================================================================
 # MAIN SCRIPT - performs the full workflow for whichever instrument is passed
 # =========================================================================
 def main(instrument: str) -> None:
-    run_parser, logger = load_instrument(instrument)
-    workflow = config.WORKFLOW
-    STEP_ORDER = list(workflow.keys())
-
-    # Check the Instrument Config is loaded correctly
-    if instrument.lower() not in config.INSTRUMENT_DIR.name.lower():
-        logger.info(f"!! Wrong instrument selected in Main_Config.py")
-        return
+    INSTRUMENT_DIR, logger, LOGFILES_CSV, UTILISATION_CSV, STALE_INSTRUMENT_TXT, LOGFILES_HYPER, UTILISATION_HYPER, TABLEAU_DATASETS = load_instrument(instrument)
+    STEP_ORDER = list(STEPS_TO_RUN.keys())
 
     def step_trace(str, step):
         step = f"Step {STEP_ORDER.index(step) + 1}/{len(STEP_ORDER)}"
@@ -65,14 +85,13 @@ def main(instrument: str) -> None:
     # 1. Condense traces into a single .csv
     # ---------------------------------------------------------------------
     step = "parse_logs"
-    if workflow[step]:
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
-            if config.INSTRUMENT_DIR.exists():
+            if INSTRUMENT_DIR.exists():
                 run_parser(
-                    log_folder=config.INSTRUMENT_DIR,
-                    processed_folder=config.PROCESSED_DIR,
-                    output_file=config.SUMMARY_RAW_CSV,
+                    log_folder=INSTRUMENT_DIR,
+                    output_file=LOGFILES_CSV,
                     logger=logger
                 )
             else:
@@ -82,33 +101,37 @@ def main(instrument: str) -> None:
     else:
         step_trace("end", step)
 
-    # 2. Tidy raw csv into a Tableau-ready csv
+    # 2. Create Utilisation Report
     # ---------------------------------------------------------------------
-    step = "clean_logs"
-    if workflow[step]:
+    step = "create_util"
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
-            run_cleaner(
-                raw_input_file=config.SUMMARY_RAW_CSV,
-                tidy_output_file=config.SUMMARY_TIDY_CSV,
-                logger=logger,
-            )
+            if LOGFILES_CSV.exists():
+                run_hourly_utilisation(
+                    summary_file=LOGFILES_CSV,
+                    output_file=UTILISATION_CSV,
+                    exclude_weekends=EXCLUDE_WEEKENDS,
+                    days=DAYS_TO_ANALYSE,
+                    logger=logger,
+                )
+            else:
+                raise FileNotFoundError("Tidy log.csv file not found")
         except Exception:
             step_trace("error", step)
     else:
         step_trace("end", step)
 
-    # 3. Convert tidy csv into a hyper file
+    # 3. Create a hyper file & send to Tableau
     # ---------------------------------------------------------------------
     step = "create_log_hyper"
-    if workflow[step]:
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
-            if config.SUMMARY_TIDY_CSV.exists():
+            if LOGFILES_CSV.exists():
                 create_hyper_from_csv(
-                    csv_path=config.SUMMARY_TIDY_CSV,
-                    hyper_path=config.SUMMARY_TIDY_HYPER,
-                    column_headers=config.CSV_FIELDS,
+                    csv_path=LOGFILES_CSV,
+                    hyper_path=LOGFILES_HYPER,
                     logger=logger,
                 )
             else:
@@ -118,38 +141,16 @@ def main(instrument: str) -> None:
     else:
         step_trace("end", step)
 
-    # 4. Create Utilisation Report
-    # ---------------------------------------------------------------------
-    step = "create_util"
-    if workflow[step]:
-        step_trace("start", step)
-        try:
-            if config.SUMMARY_TIDY_CSV.exists():
-                run_hourly_utilisation(
-                    summary_file=config.SUMMARY_TIDY_CSV,
-                    output_file=config.UTILISATION_CSV,
-                    exclude_weekends=config.EXCLUDE_WEEKENDS,
-                    days=40,
-                    logger=logger,
-                )
-            else:
-                raise FileNotFoundError("Tidy log.csv file not found")
-        except Exception:
-            step_trace("error", step)
-    else:
-        step_trace("end", step)
-
-    # 5. Convert utilisation csv into a hyper file
+    # 4. Create a hyper file & send to Tableau
     # ---------------------------------------------------------------------
     step = "create_util_hyper"
-    if workflow[step]:
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
-            if config.UTILISATION_CSV.exists():
+            if UTILISATION_CSV.exists():
                 create_hyper_from_csv(
-                    csv_path=config.UTILISATION_CSV,
-                    hyper_path=config.UTILISATION_HYPER,
-                    column_headers=config.UTIL_FIELDS,
+                    csv_path=UTILISATION_CSV,
+                    hyper_path=UTILISATION_HYPER,
                     logger=logger,
                 )
             else:
@@ -159,36 +160,13 @@ def main(instrument: str) -> None:
     else:
         step_trace("end", step)
 
-    # 5. Publish .hyper's to Tableau Server
-    # ---------------------------------------------------------------------
-    step = "publish_hypers"
-    if workflow[step]:
-        step_trace("start", step)
-        try:
-            if config.SUMMARY_TIDY_HYPER.exists() or config.UTILISATION_HYPER.exists():
-                publish_hypers_to_tableau(
-                    datasets=config.TABLEAU_DATASETS,
-                    project_id=config.TABLEAU_PROJECT_ID,
-                    logger=logger,
-                    server_url=config.TABLEAU_SERVER_ADDRESS,
-                    site_id=config.TABLEAU_SITE_ID,
-                    token_name=credentials.TOKEN_NAME,
-                    token_secret=credentials.TOKEN_SECRET,
-                )
-            else:
-                raise FileNotFoundError(f"hyper input file not found")
-        except Exception:
-            step_trace("error", step)
-    else:
-        step_trace("end", step)
-
-    # 6. Check Instrument Activity
+    # 5. Check Instrument Activity
     # ---------------------------------------------------------------------
     step = "check_stale"
-    if workflow[step]:
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
-            if config.SUMMARY_TIDY_CSV.exists():
+            if SUMMARY_TIDY_CSV.exists():
                 check_stale_instruments(
                     StaleCheckConfig(
                         tidy_csv=config.SUMMARY_TIDY_CSV,
@@ -206,10 +184,10 @@ def main(instrument: str) -> None:
     else:
         step_trace("end", step)
 
-    # 7. Optional Slack notification
+    # 6. Optional Slack notification
     # ---------------------------------------------------------------------
     step = "send_slack"
-    if workflow[step]:
+    if STEPS_TO_RUN[step]:
         step_trace("start", step)
         try:
             slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)

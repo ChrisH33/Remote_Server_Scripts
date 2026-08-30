@@ -6,26 +6,26 @@ from typing import List, Optional, Tuple
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
-import Logfile_Analyser.Main_Config as config
- 
+import Logfile_Analyser.Generic._ProcessTypes as config
+
 # =========================================================================
 # Bravo Definitions
 # =========================================================================
- 
+
 BRAVO_METHOD_RE = re.compile(r"method file: ([^\\]+)\.pro", re.IGNORECASE)
 BRAVO_SERIAL_RE = re.compile(r"(Bravo\s*-\s*\d+)", re.IGNORECASE)
- 
+
 # =========================================================================
 # Hamilton Definitions
 # =========================================================================
 
-METHOD_RE = re.compile(r"system : analyze method - start; method file .*\\([^\\]+)\.hsl",re.IGNORECASE,)
-SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
+HAMILTON_METHOD_RE = re.compile(r"system : analyze method - start; method file .*\\([^\\]+)\.hsl", re.IGNORECASE)
+HAMILTON_SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNORECASE)
 
 # =========================================================================
 # General Definitions - VARIABLE
 # =========================================================================
- 
+
 FILE_EXTENSIONS = (
     "*.log",
     "*.trc",
@@ -54,8 +54,6 @@ DATETIME_FORMATS = (
     "%m/%d/%Y %I:%M:%S %p",
     "%Y-%m-%d %H:%M:%S",
 )
-# Best-effort regex used to pull a timestamp-looking chunk out of a line
-# before trying to strptime it, since log lines are rarely *just* a timestamp.
 TIMESTAMP_RE = re.compile(
     r"\d{1,4}[-/][A-Za-z0-9]{1,4}[-/]\d{2,4}[ ,]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?",
     re.IGNORECASE,
@@ -76,7 +74,7 @@ FILENAME_PREFIXES_TO_DROP = (
 # =========================================================================
 # General Definitions - FIXED
 # =========================================================================
- 
+
 @dataclass
 class MethodRun:
     instrument: Optional[str] = None
@@ -90,7 +88,7 @@ class MethodRun:
     run_date: Optional[str] = None
     process_type: Optional[str] = None
     method_simplified: Optional[str] = None
- 
+
 CSV_FIELDS = [
     ("instrument",              "Instrument",           "text"),
     ("filename",                "Filename",             "text"),
@@ -107,11 +105,11 @@ CSV_FIELDS = [
 MAX_WORKERS = min(8, os.cpu_count() or 8)  # currently unused; parsing is sequential
 move_files = config.MOVE_FILES_AFTER_PARSE
 process_types = config.PROCESS_TYPES
- 
+
 # =========================================================================
 # Basic Functions
 # =========================================================================
- 
+
 def parse_timestamp(line: str) -> Optional[datetime]:
     """Try to pull a timestamp out of a log line and parse it."""
     if not line:
@@ -120,20 +118,36 @@ def parse_timestamp(line: str) -> Optional[datetime]:
     if not line:
         return None
 
-def parse_method_name(line: str):
-    match = METHOD_RE.search(line)
+    candidates = []
+    match = TIMESTAMP_RE.search(line)
     if match:
-        return match.group(1)
+        candidates.append(match.group(0).strip())
+    candidates.append(line)  # fallback: maybe the whole line is a timestamp
+
+    for candidate in candidates:
+        for fmt in DATETIME_FORMATS:
+            try:
+                return datetime.strptime(candidate, fmt)
+            except ValueError:
+                continue
     return None
 
-def parse_status(line: str):
+def parse_method_name(line: str) -> Optional[str]:
+    for pattern in (BRAVO_METHOD_RE, HAMILTON_METHOD_RE):
+        match = pattern.search(line)
+        if match:
+            return match.group(1)
+    return None
+
+def parse_status(line_lower: str) -> Optional[str]:
     for key, pattern in END_PATTERNS.items():
-        if pattern in line:
-            return "Complete" if key.lower() == "complete" else "Aborted"
+        if pattern in line_lower:
+            return "Complete" if key.startswith("end") else "Aborted"
     return None
 
-def parse_simulation_mode(line: str):
-    match = SERIAL_RE.search(line)
+def parse_simulation_mode(line: str) -> Optional[str]:
+    # Hamilton logs report a serial number; "0000" indicates simulation mode.
+    match = HAMILTON_SERIAL_RE.search(line)
     if match:
         serial = match.group(1).strip()
         return "Sim" if serial == "0000" else "Live"
@@ -144,63 +158,74 @@ def parse_simulation_mode(line: str):
 # =========================================================================
 
 def find_logfiles(
-    log_folder: Path, 
+    log_folder: Path,
     processed_folder: Path,
-) -> list[Path]:
-    
-    files = List[Path] = []
+) -> Tuple[List[Path], int]:
+
+    files: List[Path] = []
     skipped_count = 0
     ignored = {processed_folder.resolve()}
-    lowered_prefixes = tuple(prefix.lower() for prefix in files_to_drop)
+    lowered_prefixes = tuple(prefix.lower() for prefix in FILENAME_PREFIXES_TO_DROP)
 
     for entry in log_folder.iterdir():
         if not entry.is_dir() or entry.resolve() in ignored:
             continue
 
-        for logfile in entry.rglob(FILE_EXTENSION):
-            if logfile.name.lower().startswith(lowered_prefixes):
-                skipped_count += 1
-                continue
-            files.append(logfile)
+        for pattern in FILE_EXTENSIONS:
+            for logfile in entry.rglob(pattern):
+                if logfile.name.lower().startswith(lowered_prefixes):
+                    skipped_count += 1
+                    continue
+                files.append(logfile)
+
     return files, skipped_count
 
 def calculate_fields(
-    raw_row: dict,
-    csv_fields: list[tuple[str, str, str]],
+    run: MethodRun,
+    csv_fields: list,
     process_types: dict,
-    date_formats,
 ) -> list:
 
-    start_time = parse_timestamps(raw_row.get("Start Time", ""), date_formats)
-    end_time = parse_timestamps(raw_row.get("End Time", ""), date_formats)
-    method = raw_row.get("Method", "")
-    run_duration = round(((end_time - start_time).total_seconds() / 60), 2)if start_time and end_time else None
+    start_time = run.start_time
+    end_time = run.end_time
+    method = run.method or ""
+
+    run_duration = None
+    if start_time and end_time:
+        run_duration = round((end_time - start_time).total_seconds() / 60, 2)
+
     run_date = start_time.date().isoformat() if start_time else None
 
-    for process_type, simplified_methods in process_types.items():
-        for method_simplified, variants in simplified_methods.items():
+    process_type = None
+    method_simplified = None
+    for p_type, simplified_methods in process_types.items():
+        for simp_name, variants in simplified_methods.items():
             if any(v.casefold() == method.casefold() for v in variants):
+                process_type = p_type
+                method_simplified = simp_name
                 break
+        if process_type:
+            break
 
     data = {
-        "instrument": raw_row.get("Instrument", ""),
-        "filename": raw_row.get("Filename", ""),
+        "instrument": run.instrument or "",
+        "filename": run.filename or "",
         "start_time": start_time,
         "end_time": end_time,
-        "status": raw_row.get("Status", ""),
-        "sim_mode": raw_row.get("Sim Mode", ""),
+        "status": run.status,
+        "sim_mode": run.sim_mode or "",
         "method": method,
         "run_duration_minutes": run_duration,
         "run_date": run_date,
-        "process_type": process_type,
-        "method_simplified": method_simplified,
+        "process_type": process_type or "",
+        "method_simplified": method_simplified or "",
     }
-    return [data.get(key,"") for key, _, _ in csv_fields]
+    return [data.get(key, "") for key, _, _ in csv_fields]
 
 def write_results(
-    rows: list[list],
+    rows: list,
     output_file: Path,
-    fields: list[tuple[str, str, str]]
+    fields: list,
 ) -> None:
     """Write all parsed results to the CSV."""
     with output_file.open("a", newline="", encoding="utf-8") as file:
@@ -213,10 +238,10 @@ def write_results(
         # Add the data
         writer.writerows(rows)
 
-def process_file(logfile: Path):
-    """Parse one logfile and return its path and extracted data."""
-    runs = []
-    current_run = None
+def process_file(logfile: Path) -> List[MethodRun]:
+    """Parse one logfile and return the MethodRuns found in it."""
+    runs: List[MethodRun] = []
+    current_run: Optional[MethodRun] = None
     last_line = None
 
     with logfile.open("r", encoding="utf-8", errors="ignore") as file:
@@ -228,51 +253,53 @@ def process_file(logfile: Path):
             # ---------------------------------------------------------
             # New run detected
             # ---------------------------------------------------------
-            if any(i in line_lower for i in START_PATTERNS.values()):
-                current_run = BravoRun()
-                current_run.instrument = logfile.parent.name
-                current_run.start_time = parse_timestamp(line)
+            if any(pattern in line_lower for pattern in START_PATTERNS.values()):
+                # If a previous run never hit an end/abort line, keep it
+                # (as Incomplete) before starting the new one.
+                if current_run is not None:
+                    runs.append(current_run)
 
+                current_run = MethodRun(
+                    instrument=logfile.parent.name,
+                    filename=logfile.name,
+                )
+                current_run.start_time = parse_timestamp(line)
                 method = parse_method_name(line)
                 if method:
                     current_run.method = method
+                continue
 
             # Ignore pre-run information
             if current_run is None:
                 continue
 
-
-
-            # Method Name
+            # Method name (fill once)
             if current_run.method is None:
-                current_run.method = parse_method_name(line)
+                method = parse_method_name(line)
+                if method:
+                    current_run.method = method
 
-            # End / abort
-            if current_run.start_time is not None:
-                if any(i in line_lower for i in END_PATTERNS.values()):
-                    current_run.end_time = parse_timestamp(line_lower)
-                    current_run.status = parse_status(line_lower)
+            # Sim / Live mode (fill once)
+            if current_run.sim_mode is None:
+                sim_mode = parse_simulation_mode(line)
+                if sim_mode:
+                    current_run.sim_mode = sim_mode
 
-            # Unique FileID
-            if current_run.method and current_run.start_time:
-                current_run.uniqueID = (
-                    f"{current_run.instrument}_"
-                    f"{current_run.start_time:%Y%m%d_%H%M%S}_"
-                    f"{current_run.method}"
-                )
-
+            # End / abort — this is what actually closes out a run
+            if any(pattern in line_lower for pattern in END_PATTERNS.values()):
+                current_run.end_time = parse_timestamp(line)
+                current_run.status = parse_status(line_lower)
                 runs.append(current_run)
                 current_run = None
-
 
     # ---------------------------------------------------------
     # End of file fallback
     # ---------------------------------------------------------
-    if current_run:
+    if current_run is not None:
         if current_run.status == "Incomplete":
             current_run.end_time = parse_timestamp(last_line)
         runs.append(current_run)
-    
+
     return runs
 
 
@@ -289,20 +316,31 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
 
     logger.info("Looking for files to process...")
 
-    processed_folder = log_folder.parent / "Processed"
+    processed_folder = log_folder / "Processed"
     files, skipped_count = find_logfiles(log_folder, processed_folder)
     total_files = len(files)
 
     logger.info(
         f"Found {total_files} files "
-        f"({skipped_count} skipped by filename filter). "
+        f"({skipped_count} skipped by filename filter)."
     )
 
     # ---------------------------------------------------------
     # 2. Parse every file
     # ---------------------------------------------------------
-    
-    results = []
+
+    results: List[Tuple[Path, MethodRun]] = []
+    for logfile in files:
+        try:
+            runs = process_file(logfile)
+        except OSError as e:
+            logger.warning(f"Could not read {logfile.name}: {e}")
+            continue
+
+        for run in runs:
+            if run.status in STATUSES_TO_DROP:
+                continue
+            results.append((logfile, run))
 
     # ---------------------------------------------------------
     # 3. Write all parsed results to CSV
@@ -310,23 +348,29 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
 
     logger.info(f"Writing results to {output_file}")
 
-    for _, raw_row in results:
-        tidy_row = calculate_fields(raw_row, csv_fields, process_types, date_formats)
-
-    write_results([tidy_row], output_file, csv_fields)
+    tidy_rows = [
+        calculate_fields(run, CSV_FIELDS, process_types)
+        for _, run in results
+    ]
+    if tidy_rows:
+        write_results(tidy_rows, output_file, CSV_FIELDS)
 
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed
     # ---------------------------------------------------------
 
-    logger.info("Moving parsed files to Processed...")
-
     if move_files:
+        logger.info("Moving parsed files to Processed...")
+        moved_already = set()
         for logfile, _ in results:
+            if logfile in moved_already:
+                continue
+            moved_already.add(logfile)
+
             instrument_folder = logfile.parent.name
-            destination_folder = (processed_folder / instrument_folder)
+            destination_folder = processed_folder / instrument_folder
             destination_folder.mkdir(parents=True, exist_ok=True)
-            destination = (destination_folder / logfile.name)
+            destination = destination_folder / logfile.name
             try:
                 shutil.move(str(logfile), str(destination))
             except OSError as e:
@@ -334,4 +378,4 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
     else:
         logger.info("Skipping logfile transfer")
 
-    logger.info(f"Finished. {len(rows)} results saved to {Path(output_file).name}")
+    logger.info(f"Finished. {len(tidy_rows)} results saved to {Path(output_file).name}")
