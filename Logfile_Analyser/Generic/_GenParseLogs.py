@@ -2,7 +2,7 @@ import re
 import os
 import csv
 import shutil
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
@@ -103,8 +103,6 @@ CSV_FIELDS = [
     ("method_simplified",       "Method Simp.",         "text"),
 ]
 MAX_WORKERS = min(8, os.cpu_count() or 8)  # currently unused; parsing is sequential
-move_files = config.MOVE_FILES_AFTER_PARSE
-process_types = config.PROCESS_TYPES
 
 # =========================================================================
 # Basic Functions
@@ -180,6 +178,85 @@ def find_logfiles(
 
     return files, skipped_count
 
+def process_file(logfile: Path) -> List[MethodRun]:
+    """Parse one logfile and return the MethodRuns found in it."""
+    runs: List[MethodRun] = []
+    current_run: Optional[MethodRun] = None
+
+    # Method name and Sim/Live mode can both appear on lines seen *before*
+    # the line that officially opens a run. A Hamilton log typically reports
+    # "Analyze method - Start; method file ...hsl" and the instrument serial
+    # number while the run is still starting up, and only later logs
+    # "Start method - Complete;" (the line START_PATTERNS actually matches
+    # on). The original implementation only looked at lines *after*
+    # current_run existed, so the run's method and sim/live mode were
+    # silently dropped whenever they appeared before the start line.
+    # Tracking them as "pending" values fixes that, and also still works
+    # for logs (e.g. Bravo) where the method name is on the start line
+    # itself.
+    pending_method: Optional[str] = None
+    pending_sim_mode: Optional[str] = None
+    last_line = None
+
+    with logfile.open("r", encoding="utf-8", errors="ignore") as file:
+        for raw_line in file:
+            line = raw_line.rstrip("\n")
+            last_line = line
+            line_lower = line.lower()
+
+            method_here = parse_method_name(line)
+            if method_here:
+                pending_method = method_here
+                if current_run is not None and current_run.method is None:
+                    current_run.method = method_here
+
+            sim_mode_here = parse_simulation_mode(line)
+            if sim_mode_here:
+                pending_sim_mode = sim_mode_here
+                if current_run is not None and current_run.sim_mode is None:
+                    current_run.sim_mode = sim_mode_here
+
+            # ---------------------------------------------------------
+            # New run detected
+            # ---------------------------------------------------------
+            if any(pattern in line_lower for pattern in START_PATTERNS.values()):
+                # If a previous run never hit an end/abort line, keep it
+                # (as Incomplete) before starting the new one.
+                if current_run is not None:
+                    runs.append(current_run)
+
+                current_run = MethodRun(
+                    instrument=logfile.parent.name,
+                    filename=logfile.name,
+                )
+                current_run.start_time = parse_timestamp(line)
+                current_run.method = pending_method
+                current_run.sim_mode = pending_sim_mode
+                pending_method = None
+                pending_sim_mode = None
+                continue
+
+            # Ignore pre-run information
+            if current_run is None:
+                continue
+
+            # End / abort — this is what actually closes out a run
+            if any(pattern in line_lower for pattern in END_PATTERNS.values()):
+                current_run.end_time = parse_timestamp(line)
+                current_run.status = parse_status(line_lower)
+                runs.append(current_run)
+                current_run = None
+
+    # ---------------------------------------------------------
+    # End of file fallback
+    # ---------------------------------------------------------
+    if current_run is not None:
+        if current_run.status == "Incomplete":
+            current_run.end_time = parse_timestamp(last_line)
+        runs.append(current_run)
+
+    return runs
+
 def calculate_fields(
     run: MethodRun,
     csv_fields: list,
@@ -222,12 +299,31 @@ def calculate_fields(
     }
     return [data.get(key, "") for key, _, _ in csv_fields]
 
+def _dedupe_key(filename: Optional[str], start_time: Optional[datetime]) -> Tuple[str, str]:
+    """Identify a run by (filename, start time) so re-running the parser
+    against files that were never moved out of the source folder doesn't
+    write the same run into the CSV twice."""
+    return (filename or "", str(start_time) if start_time is not None else "")
+
+def load_existing_keys(output_file: Path) -> Set[Tuple[str, str]]:
+    """Read back which (filename, start time) pairs are already in the
+    output CSV, so run_parser() can skip re-adding them."""
+    keys: Set[Tuple[str, str]] = set()
+    if not output_file.exists():
+        return keys
+    with output_file.open("r", newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            keys.add((row.get("Filename", "") or "", row.get("Start Time", "") or ""))
+    return keys
+
 def write_results(
     rows: list,
     output_file: Path,
     fields: list,
 ) -> None:
     """Write all parsed results to the CSV."""
+    output_file.parent.mkdir(parents=True, exist_ok=True)
     with output_file.open("a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
@@ -238,75 +334,23 @@ def write_results(
         # Add the data
         writer.writerows(rows)
 
-def process_file(logfile: Path) -> List[MethodRun]:
-    """Parse one logfile and return the MethodRuns found in it."""
-    runs: List[MethodRun] = []
-    current_run: Optional[MethodRun] = None
-    last_line = None
-
-    with logfile.open("r", encoding="utf-8", errors="ignore") as file:
-        for raw_line in file:
-            line = raw_line.rstrip("\n")
-            last_line = line
-            line_lower = line.lower()
-
-            # ---------------------------------------------------------
-            # New run detected
-            # ---------------------------------------------------------
-            if any(pattern in line_lower for pattern in START_PATTERNS.values()):
-                # If a previous run never hit an end/abort line, keep it
-                # (as Incomplete) before starting the new one.
-                if current_run is not None:
-                    runs.append(current_run)
-
-                current_run = MethodRun(
-                    instrument=logfile.parent.name,
-                    filename=logfile.name,
-                )
-                current_run.start_time = parse_timestamp(line)
-                method = parse_method_name(line)
-                if method:
-                    current_run.method = method
-                continue
-
-            # Ignore pre-run information
-            if current_run is None:
-                continue
-
-            # Method name (fill once)
-            if current_run.method is None:
-                method = parse_method_name(line)
-                if method:
-                    current_run.method = method
-
-            # Sim / Live mode (fill once)
-            if current_run.sim_mode is None:
-                sim_mode = parse_simulation_mode(line)
-                if sim_mode:
-                    current_run.sim_mode = sim_mode
-
-            # End / abort — this is what actually closes out a run
-            if any(pattern in line_lower for pattern in END_PATTERNS.values()):
-                current_run.end_time = parse_timestamp(line)
-                current_run.status = parse_status(line_lower)
-                runs.append(current_run)
-                current_run = None
-
-    # ---------------------------------------------------------
-    # End of file fallback
-    # ---------------------------------------------------------
-    if current_run is not None:
-        if current_run.status == "Incomplete":
-            current_run.end_time = parse_timestamp(last_line)
-        runs.append(current_run)
-
-    return runs
-
-
 # =========================================================================
 # MAIN PARSER
 # =========================================================================
-def run_parser(log_folder: Path, output_file: Path, logger) -> None:
+def run_parser(
+    log_folder: Path,
+    output_file: Path,
+    logger,
+    move_files: Optional[bool] = None,
+) -> None:
+
+    # BUG FIX: this used to be read as `config.MOVE_FILES_AFTER_PARSE` at
+    # *import* time (before _ProcessTypes.MOVE_FILES_AFTER_PARSE even
+    # existed), which crashed on import. It's now read at call time, and
+    # callers (e.g. MainScript.py) can override it explicitly.
+    if move_files is None:
+        move_files = config.MOVE_FILES_AFTER_PARSE
+    process_types = config.PROCESS_TYPES
 
     logger.info("=== Log parser starting ===")
 
@@ -343,14 +387,36 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
             results.append((logfile, run))
 
     # ---------------------------------------------------------
-    # 3. Write all parsed results to CSV
+    # 3. De-duplicate against anything already written, then write
+    #    the new results to CSV.
     # ---------------------------------------------------------
+    # BUG FIX: previously every parsed run was appended unconditionally.
+    # If move_files is False (MainScript's default), files never leave the
+    # source folder, so every run of the pipeline would re-add every run
+    # from every historic logfile, duplicating rows in the tidy CSV (and
+    # therefore in Tableau) each time it ran.
+
+    existing_keys = load_existing_keys(output_file)
+    new_results: List[Tuple[Path, MethodRun]] = []
+    duplicate_count = 0
+    for logfile, run in results:
+        key = _dedupe_key(run.filename, run.start_time)
+        if key in existing_keys:
+            duplicate_count += 1
+            continue
+        existing_keys.add(key)
+        new_results.append((logfile, run))
+
+    if duplicate_count:
+        logger.info(
+            f"Skipped {duplicate_count} run(s) already present in {output_file.name}"
+        )
 
     logger.info(f"Writing results to {output_file}")
 
     tidy_rows = [
         calculate_fields(run, CSV_FIELDS, process_types)
-        for _, run in results
+        for _, run in new_results
     ]
     if tidy_rows:
         write_results(tidy_rows, output_file, CSV_FIELDS)
@@ -358,6 +424,9 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
     # ---------------------------------------------------------
     # 4. Move all parsed files to Processed
     # ---------------------------------------------------------
+    # NB: this moves every file that was successfully *parsed*, not just
+    # the ones that produced new (non-duplicate) rows - once a file has
+    # been read, there's no reason to read it again.
 
     if move_files:
         logger.info("Moving parsed files to Processed...")
@@ -378,4 +447,4 @@ def run_parser(log_folder: Path, output_file: Path, logger) -> None:
     else:
         logger.info("Skipping logfile transfer")
 
-    logger.info(f"Finished. {len(tidy_rows)} results saved to {Path(output_file).name}")
+    logger.info(f"Finished. {len(tidy_rows)} new result(s) saved to {Path(output_file).name}")
