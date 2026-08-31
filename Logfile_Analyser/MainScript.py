@@ -1,4 +1,5 @@
 import sys
+import time
 from pathlib import Path
 from Logging_Util import get_logger
 from Logfile_Analyser.Generic._GenParseLogs import run_parser
@@ -193,4 +194,8 @@ def main():
 
 
 if __name__ == "__main__":
+    start = time.time()
     main()
+    elapsed = time.time() - start
+    mins, secs = divmod(elapsed, 60)
+    logger.info(f"Total runtime: {int(mins)}m {secs:.1f}s")
