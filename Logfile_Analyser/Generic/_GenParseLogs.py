@@ -179,18 +179,19 @@ def process_file(logfile: Path) -> List[MethodRun]:
             last_line = line
             line_lower = line.lower()
 
-            method_here = parse_method_name(line)
-            if method_here:
-                pending_method = method_here
-                if current_run is not None and current_run.method is None:
-                    current_run.method = method_here
+            if current_run is None or current_run.method is None:
+                method_here = parse_method_name(line)
+                if method_here:
+                    pending_method = method_here
+                    if current_run is not None:
+                        current_run.method = method_here
 
-            sim_mode_here = parse_simulation_mode(line)
-            if sim_mode_here:
-                pending_sim_mode = sim_mode_here
-                if current_run is not None and current_run.sim_mode is None:
-                    current_run.sim_mode = sim_mode_here
-
+            if current_run is None or current_run.sim_mode is None:
+                sim_mode_here = parse_simulation_mode(line)
+                if sim_mode_here:
+                    pending_sim_mode = sim_mode_here
+                    if current_run is not None:
+                        current_run.sim_mode = sim_mode_here
             # ---------------------------------------------------------
             # New run detected
             # ---------------------------------------------------------
