@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 import Logfile_Analyser.Generic._ProcessTypes as config
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # =========================================================================
 # Bravo Definitions
@@ -25,6 +26,8 @@ HAMILTON_SERIAL_RE = re.compile(r"serial number of instrument:\s*(\S+)", re.IGNO
 # =========================================================================
 # General Definitions - VARIABLE
 # =========================================================================
+
+max_workers = 8
 
 FILE_EXTENSIONS = (
     "*.log",
@@ -108,12 +111,11 @@ def parse_timestamp(line: str):
     candidates.append(line)  # fallback: maybe the whole line is a timestamp
 
     for candidate in candidates:
-        for _ in DATETIME_FORMATS:
+        for fmt in DATETIME_FORMATS:
             try:
-                return datetime.strptime(candidate, "%Y-%m-%d %H:%M:%S")
+                return datetime.strptime(candidate, fmt)
             except ValueError:
                 continue
-    return None
 
 def parse_method_name(line: str):
     for pattern in (BRAVO_METHOD_RE, HAMILTON_METHOD_RE):
@@ -343,22 +345,23 @@ def run_parser(
     # 2. Parse every file
     # ---------------------------------------------------------
 
-    results: List[Tuple[Path, MethodRun]] = []
+    results = []
 
-    for i, logfile in enumerate(files, start=1):
-        if i % 1000 == 0:
-            logger.info(f"Processed {i:,} files...")
-
-        try:
-            runs = process_file(logfile)
-        except OSError as e:
-            logger.warning(f"Could not read {logfile.name}: {e}")
-            continue
-
-        for run in runs:
-            if run.status in STATUSES_TO_DROP:
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        future_to_file = {executor.submit(process_file, f): f for f in files}
+        for i, future in enumerate(as_completed(future_to_file), start=1):
+            logfile = future_to_file[future]
+            if i % 1000 == 0:
+                logger.info(f"Processed {i:,} files...")
+            try:
+                runs = future.result()
+            except OSError as e:
+                logger.warning(f"Could not read {logfile.name}: {e}")
                 continue
-            results.append((logfile, run))
+            for run in runs:
+                if run.status in STATUSES_TO_DROP:
+                    continue
+                results.append((logfile, run))
 
     # ---------------------------------------------------------
     # 3. De-duplicate against anything already written, then write
