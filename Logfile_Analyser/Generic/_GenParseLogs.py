@@ -165,6 +165,16 @@ def find_logfiles(
 
     return files, skipped_count
 
+def matched_start_pattern(line_lower: str) -> bool:
+    return any(pattern in line_lower for pattern in START_PATTERNS.values())
+
+def matched_end_pattern(line_lower: str) -> Optional[str]:
+    """Return the END_PATTERNS key that matched this line, or None."""
+    for key, pattern in END_PATTERNS.items():
+        if pattern in line_lower:
+            return key
+    return None
+
 def process_file(logfile: Path) -> List[MethodRun]:
     """Parse one logfile and return the MethodRuns found in it."""
     runs: List[MethodRun] = []
@@ -179,7 +189,6 @@ def process_file(logfile: Path) -> List[MethodRun]:
             last_line = line
             line_lower = line.lower()
 
-            # Method Name
             if current_run is None or current_run.method is None:
                 method_here = parse_method_name(line)
                 if method_here:
@@ -187,7 +196,6 @@ def process_file(logfile: Path) -> List[MethodRun]:
                     if current_run is not None:
                         current_run.method = method_here
 
-            # Simulation Mode
             if current_run is None or current_run.sim_mode is None:
                 sim_mode_here = parse_simulation_mode(line)
                 if sim_mode_here:
@@ -195,13 +203,10 @@ def process_file(logfile: Path) -> List[MethodRun]:
                     if current_run is not None:
                         current_run.sim_mode = sim_mode_here
 
-                        
             # ---------------------------------------------------------
             # New run detected
             # ---------------------------------------------------------
-            if any(pattern in line_lower for pattern in START_PATTERNS.values()):
-                # If a previous run never hit an end/abort line, keep it
-                # (as Incomplete) before starting the new one.
+            if matched_start_pattern(line_lower):
                 if current_run is not None:
                     runs.append(current_run)
 
@@ -221,11 +226,10 @@ def process_file(logfile: Path) -> List[MethodRun]:
                 continue
 
             # End / abort — this is what actually closes out a run
-            if any(pattern in line_lower for pattern in END_PATTERNS.values()):
+            end_key = matched_end_pattern(line_lower)
+            if end_key:
                 current_run.end_time = parse_timestamp(line)
-                status = parse_status(line_lower)
-                if status:
-                    current_run.status = status
+                current_run.status = "Complete" if end_key.startswith("end") else "Aborted"
                 runs.append(current_run)
                 current_run = None
 
