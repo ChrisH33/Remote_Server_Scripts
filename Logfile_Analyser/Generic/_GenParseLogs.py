@@ -45,7 +45,7 @@ END_PATTERNS = {
     "end_5":            "available button(s): <ok>,   default button: <ok>,   message: <end of uv decontamination process.>",
     "end_6":            "main protocol complete",
     "abort_1":          "system : abort method - start;",
-    "abort_2":          "system : method has been aborted by the;",
+    "abort_2":          "system : method has been aborted by the",
     "abort_3":          "main protocol aborted",
     "abort_4":          "system : execute method - error; an error occurred while running vector.",
 }
@@ -117,9 +117,16 @@ def parse_timestamp(line: str):
             except ValueError:
                 continue
 
-def parse_method_name(line: str):
-    for pattern in (BRAVO_METHOD_RE, HAMILTON_METHOD_RE):
-        match = pattern.search(line)
+def parse_method_name(line: str, line_lower: str):
+    # Cheap substring check (fast C-level `in`) before paying for a regex
+    # search — most lines contain neither marker, so this skips both
+    # compiled patterns on the vast majority of lines.
+    if "method file:" in line_lower:
+        match = BRAVO_METHOD_RE.search(line)
+        if match:
+            return match.group(1)
+    if "analyze method" in line_lower:
+        match = HAMILTON_METHOD_RE.search(line)
         if match:
             return match.group(1)
     return None
@@ -130,8 +137,10 @@ def parse_status(line_lower: str):
             return "Complete" if key.startswith("end") else "Aborted"
     return None
 
-def parse_simulation_mode(line: str):
+def parse_simulation_mode(line: str, line_lower: str):
     # Hamilton logs report a serial number; "0000" indicates simulation mode.
+    if "serial number of instrument" not in line_lower:
+        return None
     match = HAMILTON_SERIAL_RE.search(line)
     if match:
         serial = match.group(1).strip()
@@ -190,14 +199,14 @@ def process_file(logfile: Path) -> List[MethodRun]:
             line_lower = line.lower()
 
             if current_run is None or current_run.method is None:
-                method_here = parse_method_name(line)
+                method_here = parse_method_name(line, line_lower)
                 if method_here:
                     pending_method = method_here
                     if current_run is not None:
                         current_run.method = method_here
 
             if current_run is None or current_run.sim_mode is None:
-                sim_mode_here = parse_simulation_mode(line)
+                sim_mode_here = parse_simulation_mode(line, line_lower)
                 if sim_mode_here:
                     pending_sim_mode = sim_mode_here
                     if current_run is not None:
@@ -228,13 +237,14 @@ def process_file(logfile: Path) -> List[MethodRun]:
             # End / abort — this is what actually closes out a run
             end_key = matched_end_pattern(line_lower)
             if end_key:
-                current_run.end_time = parse_timestamp(line)
+                current_run.end_time = parse_timestamp(last_line)
                 current_run.status = "Complete" if end_key.startswith("end") else "Aborted"
                 runs.append(current_run)
                 current_run = None
 
     # ---------------------------------------------------------
-    # End of file fallback
+    #                  End of file fallback
+    #       File ended without a "method complete" flag
     # ---------------------------------------------------------
     if current_run is not None:
         if current_run.status == "Incomplete":

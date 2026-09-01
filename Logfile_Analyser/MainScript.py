@@ -9,18 +9,17 @@ from Logfile_Analyser.Generic._HourlyUtilisation import run_hourly_utilisation
 from SlackClientWrapper.Slack_Connector import SlackClientWrapper
 from SlackClientWrapper import _config as slack_config
 
-
 # =========================================================================
 # CONFIG
 # =========================================================================
 
 STEPS_TO_RUN = {
     "parse_logs": True,
-    "create_log_hyper": False,
-    "create_util": False,
-    "create_util_hyper": False,
-    "check_stale": False,
-    "send_slack": False,
+    "create_log_hyper": True,
+    "create_util": True,
+    "create_util_hyper": True,
+    "check_stale": True,
+    "send_slack": True,
 }
 
 UTIL_FIELDS = [
@@ -53,6 +52,7 @@ LOG_FIELDS = [
 
 PARENT_DIR = Path(r"C:\Users\ch33\Documents")
 INSTRUMENT = "Hamilton"
+# INSTRUMENT = "Bravo"
 
 INSTRUMENT_DIR = PARENT_DIR / INSTRUMENT
 logger = get_logger(f"{INSTRUMENT}_logs")
@@ -72,17 +72,13 @@ UTILISATION_TABLEAU = f"{INSTRUMENT} Utilisation"
 
 def step_trace(status, step_label):
     status = status.lower()
-
     if status == "start":
         logger.info(f"========== {step_label}: Running step ==========")
-
     elif status == "error":
         logger.exception(f"!! {step_label} failed - stopping workflow")
         sys.exit(1)
-
     elif status == "end":
         logger.info(f"---------- {step_label}: Skipping step ----------")
-
 
 # =========================================================================
 # STEP FUNCTIONS
@@ -99,7 +95,6 @@ def run_parse_logs():
         move_files=False
     )
 
-
 def run_create_util():
     if not LOGFILES_CSV.exists():
         raise FileNotFoundError("Tidy log.csv file not found")
@@ -108,7 +103,6 @@ def run_create_util():
         output_file=UTILISATION_CSV,
         logger=logger
     )
-
 
 def run_create_log_hyper():
     if not LOGFILES_CSV.exists():
@@ -121,7 +115,6 @@ def run_create_log_hyper():
         logger=logger
     )
 
-
 def run_create_util_hyper():
     if not UTILISATION_CSV.exists():
         raise FileNotFoundError("Utilisation.csv file not found")
@@ -133,7 +126,6 @@ def run_create_util_hyper():
         logger=logger
     )
 
-
 def run_check_stale():
     if not LOGFILES_CSV.exists():
         raise FileNotFoundError("Tidy log.csv file not found")
@@ -142,7 +134,6 @@ def run_check_stale():
         output_txt=STALE_INSTRUMENT_TXT,
         logger=logger
     )
-
 
 def run_send_slack():
     slack = SlackClientWrapper(bot_token=slack_config.SLACK_BOT_TOKEN)
@@ -156,7 +147,6 @@ def run_send_slack():
         text=message,
     )
 
-
 # =========================================================================
 # PIPELINE DEFINITION (single source of truth)
 # =========================================================================
@@ -169,7 +159,6 @@ PIPELINE = [
     ("check_stale", run_check_stale),
     ("send_slack", run_send_slack),
 ]
-
 
 # =========================================================================
 # MAIN
